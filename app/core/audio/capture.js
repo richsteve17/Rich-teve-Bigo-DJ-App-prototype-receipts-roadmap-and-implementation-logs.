@@ -2,8 +2,6 @@
 // Core audio capture module for BIGO DJ App
 // Initializes mic input, analyzes BPM, and handles EQ data streaming.
 
-import { getUserMedia } from './utils/audioHelpers.js';
-
 export async function initCapture() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
