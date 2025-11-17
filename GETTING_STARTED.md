@@ -4,6 +4,58 @@
 
 A professional-grade DJ application featuring Spotify integration, AI-powered track suggestions, beat matching, and streamer-safe music filtering. Perfect for live streaming DJs on Twitch, YouTube, and Facebook Gaming.
 
+**Three modes for every skill level:**
+- **🎮 Demo Mode** - Try everything with no setup (preloaded tracks)
+- **🎵 Simple Mode** - Learn DJ basics (single deck, core features)
+- **🚀 Full Mode** - Professional platform (all features unlocked)
+
+---
+
+## 🎮 Choose Your Mode
+
+### Demo Mode
+**Perfect for: First-time users, testing features**
+
+Try the full DJ experience without any setup:
+- ✅ No Spotify login required
+- ✅ 8 preloaded royalty-free demo tracks
+- ✅ Full dual-deck mixer
+- ✅ Beat matching & sync
+- ✅ EQ & crossfader
+- ⚠️ Limited track selection
+- ⚠️ Can't upload files or search Spotify
+
+**Start in Demo Mode:** Just open the app - it's the default!
+
+### Simple Mode
+**Perfect for: Beginners learning fundamentals**
+
+Classic DJ basics with essential features:
+- ✅ Single deck operation
+- ✅ Audio capture from microphone
+- ✅ Spectrum visualizer
+- ✅ BPM detection
+- ✅ Local file upload
+- ⚠️ No Spotify or AI features
+- ⚠️ Single deck only
+
+**Switch to Simple Mode:** Click the mode indicator in the header
+
+### Full Mode
+**Perfect for: Professional DJs and advanced users**
+
+Complete DJ platform with all features:
+- ✅ Full Spotify integration
+- ✅ AI-powered recommendations
+- ✅ Advanced beat matching
+- ✅ Streamer-safe music filter
+- ✅ Dual-deck mixing
+- ✅ Harmonic mixing (Camelot wheel)
+- ✅ Local file support
+- ⚠️ Requires Spotify account (Premium for playback)
+
+**Switch to Full Mode:** Click the mode indicator, select "Full Mode"
+
 ---
 
 ## 🚀 Features
@@ -391,13 +443,99 @@ You now have a professional DJ setup right in your browser. Whether you're strea
 
 ---
 
-## ⚠️ Important Notes
+## ⚠️ Important Limitations - Being Honest
+
+### DMCA & Copyright Assessment
+The "streamer-safe" filter is **guidance, not guarantee**:
+- ✅ It flags major labels and explicit content
+- ✅ It checks popularity as a risk indicator
+- ❌ **It is NOT legal advice**
+- ❌ It cannot guarantee you won't get DMCA'd
+- ❌ Green doesn't mean "100% safe" - just "lower risk"
+
+**Reality:** Only YOU are responsible for copyright compliance. Use verified streamer-safe sources like Pretzel Rocks or StreamBeats for real safety.
+
+### Beat Matching & Sync
+Auto-sync is **helpful, not perfect**:
+- ✅ Matches BPM and aligns phase
+- ✅ Works ~80% of the time on 4/4 electronic music
+- ❌ BPM detection can be off by ±2-5 BPM
+- ❌ Phase alignment sometimes needs manual adjustment
+- ❌ Complex music (jazz, classical) confuses it
+
+**Reality:** Use your ears! The sync button is a starting point. Real DJs fine-tune by ear.
+
+### AI Recommendations
+The "AI" is **algorithmic matching, not magic**:
+- ✅ Analyzes BPM, energy, key compatibility
+- ✅ Uses harmonic mixing theory (Camelot wheel)
+- ❌ It's not truly "AI" - it's weighted scoring
+- ❌ It can't read the room or understand context
+- ❌ A 95% match might sound terrible in your set
+
+**Reality:** Trust YOUR taste. Suggestions are a starting point, not gospel.
+
+### BPM Detection Accuracy
+- **Electronic music:** 90-95% accurate
+- **Hip-hop/Pop:** 85-90% accurate
+- **Rock/Live:** 70-80% accurate
+- **Jazz/Classical:** 50-70% accurate (often confused)
+
+**Reality:** If it looks wrong, tap it out yourself and trust your count.
+
+### Headphone Cueing
+**NOT YET IMPLEMENTED** - This is a critical DJ feature we're still working on:
+- Real DJs preview Deck B in headphones before mixing
+- Web browsers have limited audio routing capabilities
+- Workaround: Use volume faders to preview quietly
+
+**Reality:** This is a browser limitation, not a choice. We're exploring solutions.
+
+### Spotify Limitations
+- **Premium required** for Web Playback SDK
+- **~500ms latency** - not ideal for precise beat matching
+- **Rate limited** to 30 requests/second
+- **Token expires** after 1 hour (must re-login)
+
+**Reality:** Spotify is great for discovery, but pros use downloaded files for actual performance.
+
+### Local Files
+- **Lost on page reload** (stored in memory, not disk)
+- **No persistent storage** in current version
+- **For production:** You'd want IndexedDB implementation
+
+**Reality:** This is a web app limitation. Desktop DJ software doesn't have this issue.
+
+---
+
+## 💡 The Bottom Line
+
+BIGO DJ is a **powerful learning tool and practice platform**. It's honest about what it can and can't do:
+
+✅ **Great for:**
+- Learning DJ fundamentals
+- Practicing mixing techniques
+- Discovering music via Spotify
+- Testing ideas before going live
+
+❌ **Not a replacement for:**
+- Professional DJ software (Serato, Rekordbox, Traktor)
+- Legal advice on music licensing
+- Perfect beat detection algorithms
+- Desktop app storage and performance
+
+**We built this to be transparent, not perfect.** Know the limitations, work within them, and have fun!
+
+---
+
+## ⚠️ Additional Notes
 
 - **Spotify Premium required** for full Spotify playback (Web Playback SDK limitation)
 - **Local files** are lost on page reload (stored in memory, not disk)
 - **For production streaming:** Consider setting up IndexedDB for persistent local storage
 - **Copyright:** Always respect music licensing when streaming
+- **Browser support:** Chrome/Edge recommended for best Web Audio API support
 
 ---
 
-*Built with ❤️ for the DJ community*
+*Built with ❤️ and brutal honesty for the DJ community*

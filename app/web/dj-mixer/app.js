@@ -10,6 +10,10 @@ import { AIRecommendationEngine, PlaylistGenerator } from '../../ai/recommendati
 import { ContentFilter, StreamMonitor } from '../../core/safety/contentFilter.js';
 import { DJTutorial } from '../../ui/tutorial/djTutorial.js';
 import { startRoom, stopRoom, getState, events } from '../../core/session/room.js';
+import { ModeManager, AppMode } from '../../core/modes.js';
+import { getDemoTracks, searchDemoTracks } from '../../data/demoTracks.js';
+import { showModeSelector, createModeIndicator, confirmModeChange, showFirstTimeSetup } from '../../ui/components/modeSelector.js';
+import { showDisclaimer, maybeShowDisclaimer, createWarningBadge, createInfoBadge } from '../../ui/components/disclaimers.js';
 
 class BiGoDJApp {
   constructor() {
@@ -23,32 +27,64 @@ class BiGoDJApp {
     this.streamMonitor = null;
     this.tutorial = null;
     this.localLibrary = null;
+    this.modeManager = null;
     this.allTracks = [];
     this.currentDeck = 'A';
+    this.isFirstRun = !localStorage.getItem('bigo_dj_mode');
   }
 
   async init() {
     console.log('🎵 Initializing BIGO DJ App...');
 
+    // Initialize mode manager
+    this.modeManager = new ModeManager();
+
+    // Show first-time setup if needed
+    if (this.isFirstRun) {
+      showFirstTimeSetup((mode) => {
+        this.modeManager.setMode(mode);
+        this.continueInit();
+      });
+      return;
+    }
+
+    await this.continueInit();
+  }
+
+  async continueInit() {
+    const mode = this.modeManager.getMode();
+    console.log(`🎮 Starting in ${mode} mode`);
+
     // Initialize Audio Context
     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    // Initialize Core Modules
-    this.localLibrary = new LocalTrackLibrary();
-    this.localLibrary.init(this.audioContext);
-
-    this.aiEngine = new AIRecommendationEngine();
-    this.contentFilter = new ContentFilter();
-    this.streamMonitor = new StreamMonitor(this.contentFilter);
+    // Initialize Core Modules based on mode
     this.tutorial = new DJTutorial();
 
-    // Initialize Spotify
-    const spotifyStatus = initSpotifyAPI();
-    if (spotifyStatus.authenticated) {
-      console.log('✅ Spotify authenticated');
-      this.updateSpotifyButton(true);
-    } else {
-      console.log('⚠️ Spotify not authenticated');
+    if (mode === AppMode.FULL || mode === AppMode.SIMPLE) {
+      this.localLibrary = new LocalTrackLibrary();
+      this.localLibrary.init(this.audioContext);
+    }
+
+    if (mode === AppMode.FULL) {
+      this.aiEngine = new AIRecommendationEngine();
+      this.contentFilter = new ContentFilter();
+      this.streamMonitor = new StreamMonitor(this.contentFilter);
+
+      // Initialize Spotify
+      const spotifyStatus = initSpotifyAPI();
+      if (spotifyStatus.authenticated) {
+        console.log('✅ Spotify authenticated');
+        this.updateSpotifyButton(true);
+      } else {
+        console.log('⚠️ Spotify not authenticated');
+      }
+    }
+
+    // Load tracks based on mode
+    if (mode === AppMode.DEMO) {
+      this.allTracks = getDemoTracks();
+      console.log('📦 Loaded demo tracks:', this.allTracks.length);
     }
 
     // Initialize Decks
@@ -56,6 +92,9 @@ class BiGoDJApp {
 
     // Setup UI Event Listeners
     this.setupEventListeners();
+
+    // Configure UI for current mode
+    this.configureUIForMode();
 
     // Start room/session
     try {
@@ -66,16 +105,100 @@ class BiGoDJApp {
       this.updateStatus('Error initializing');
     }
 
+    // Show mode-specific disclaimers
+    this.showModeDisclaimers();
+
     // Check if tutorial should start
-    if (this.tutorial.getProgress().completed === 0) {
+    if (this.tutorial.getProgress().completed === 0 && mode !== AppMode.SIMPLE) {
       setTimeout(() => {
         if (confirm('Welcome to BIGO DJ! Would you like to start the tutorial?')) {
           this.tutorial.start();
         }
-      }, 1000);
+      }, 2000);
     }
 
     console.log('✅ BIGO DJ Ready!');
+  }
+
+  configureUIForMode() {
+    const config = this.modeManager.getUIConfig();
+    const mode = this.modeManager.getMode();
+
+    // Update header title
+    document.querySelector('.logo').textContent = config.headerTitle;
+
+    // Show/hide Spotify login
+    const spotifyBtn = document.getElementById('spotify-login');
+    if (spotifyBtn) {
+      spotifyBtn.style.display = config.showSpotifyLogin ? 'block' : 'none';
+    }
+
+    // Show/hide AI suggestions panel
+    const suggestionsPanel = document.querySelector('.sidebar-right');
+    if (suggestionsPanel) {
+      suggestionsPanel.style.display = config.showAISuggestions ? 'flex' : 'none';
+    }
+
+    // Show/hide streamer safe filter
+    const safeFilter = document.getElementById('filter-safe-only');
+    if (safeFilter && safeFilter.parentElement) {
+      safeFilter.parentElement.style.display = config.showStreamerSafe ? 'block' : 'none';
+    }
+
+    // Show/hide Deck B for simple mode
+    const deckB = document.getElementById('deck-b');
+    if (deckB) {
+      deckB.style.display = config.showDualDecks ? 'flex' : 'none';
+    }
+
+    // Show/hide crossfader
+    const crossfaderSection = document.getElementById('crossfader-section');
+    if (crossfaderSection) {
+      crossfaderSection.style.display = config.showCrossfader ? 'block' : 'none';
+    }
+
+    // Show/hide file upload for demo mode
+    const uploadBtn = document.getElementById('upload-btn');
+    if (uploadBtn) {
+      uploadBtn.style.display = config.showFileUpload ? 'block' : 'none';
+    }
+
+    // Add mode indicator to header
+    const topControls = document.querySelector('.top-controls');
+    if (topControls && !document.getElementById('mode-indicator')) {
+      const modeIndicator = createModeIndicator(mode, () => {
+        showModeSelector(mode, (newMode) => {
+          confirmModeChange(mode, newMode, () => {
+            this.switchMode(newMode);
+          });
+        });
+      });
+      topControls.insertBefore(modeIndicator, topControls.firstChild);
+    }
+
+    // Update track browser
+    this.updateTrackBrowser();
+  }
+
+  switchMode(newMode) {
+    this.modeManager.setMode(newMode);
+    this.updateStatus('Switching modes...');
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  }
+
+  showModeDisclaimers() {
+    const mode = this.modeManager.getMode();
+
+    if (mode === AppMode.DEMO) {
+      maybeShowDisclaimer('demoMode', 1000);
+    } else if (mode === AppMode.SIMPLE) {
+      maybeShowDisclaimer('simpleMode', 1000);
+    } else if (mode === AppMode.FULL) {
+      // Show limitation disclaimers for full mode features
+      maybeShowDisclaimer('headphoneCueing', 2000);
+    }
   }
 
   async initDecks() {
