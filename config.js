@@ -69,26 +69,91 @@ export const config = {
   }
 };
 
-// Helper: Get Spotify authorization URL
-export function getSpotifyAuthUrl() {
+// Helper: Generate PKCE code verifier and challenge
+function generateCodeVerifier() {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+async function generateCodeChallenge(verifier) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(hash)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+// Helper: Get Spotify authorization URL with PKCE
+export async function getSpotifyAuthUrl() {
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+  // Store code verifier for later use
+  localStorage.setItem('spotify_code_verifier', codeVerifier);
+
   const params = new URLSearchParams({
     client_id: config.spotify.clientId,
-    response_type: 'token',
+    response_type: 'code',
     redirect_uri: config.spotify.redirectUri,
     scope: config.spotify.scopes,
+    code_challenge_method: 'S256',
+    code_challenge: codeChallenge,
     show_dialog: 'false'
   });
   return `https://accounts.spotify.com/authorize?${params.toString()}`;
 }
 
-// Helper: Parse OAuth token from URL hash
-export function parseSpotifyToken() {
-  const hash = window.location.hash.substring(1);
-  const params = new URLSearchParams(hash);
+// Helper: Parse authorization code from URL
+export function parseSpotifyCode() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('code');
+}
+
+// Helper: Exchange authorization code for access token
+export async function exchangeCodeForToken(code) {
+  const codeVerifier = localStorage.getItem('spotify_code_verifier');
+
+  if (!codeVerifier) {
+    throw new Error('Code verifier not found');
+  }
+
+  const params = new URLSearchParams({
+    client_id: config.spotify.clientId,
+    grant_type: 'authorization_code',
+    code: code,
+    redirect_uri: config.spotify.redirectUri,
+    code_verifier: codeVerifier
+  });
+
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: params.toString()
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error_description || 'Token exchange failed');
+  }
+
+  const data = await response.json();
+
+  // Clean up code verifier
+  localStorage.removeItem('spotify_code_verifier');
+
   return {
-    access_token: params.get('access_token'),
-    token_type: params.get('token_type'),
-    expires_in: parseInt(params.get('expires_in'))
+    access_token: data.access_token,
+    token_type: data.token_type,
+    expires_in: data.expires_in,
+    refresh_token: data.refresh_token
   };
 }
 
@@ -97,6 +162,9 @@ export function storeToken(tokenData) {
   const expiresAt = Date.now() + (tokenData.expires_in * 1000);
   localStorage.setItem('spotify_access_token', tokenData.access_token);
   localStorage.setItem('spotify_token_expires_at', expiresAt.toString());
+  if (tokenData.refresh_token) {
+    localStorage.setItem('spotify_refresh_token', tokenData.refresh_token);
+  }
 }
 
 // Helper: Get valid token or null if expired
