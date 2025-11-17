@@ -14,6 +14,8 @@ import { ModeManager, AppMode } from '../../core/modes.js';
 import { getDemoTracks, searchDemoTracks } from '../../data/demoTracks.js';
 import { showModeSelector, createModeIndicator, confirmModeChange, showFirstTimeSetup } from '../../ui/components/modeSelector.js';
 import { showDisclaimer, maybeShowDisclaimer, createWarningBadge, createInfoBadge } from '../../ui/components/disclaimers.js';
+import { CueSystem, TrackStaging } from '../../core/streaming/cueing.js';
+import { MixRecorder } from '../../core/streaming/recording.js';
 
 class BiGoDJApp {
   constructor() {
@@ -28,6 +30,10 @@ class BiGoDJApp {
     this.tutorial = null;
     this.localLibrary = null;
     this.modeManager = null;
+    this.cueSystem = null;
+    this.trackStaging = null;
+    this.recorder = null;
+    this.masterGainNode = null;
     this.allTracks = [];
     this.currentDeck = 'A';
     this.isFirstRun = !localStorage.getItem('bigo_dj_mode');
@@ -57,6 +63,15 @@ class BiGoDJApp {
 
     // Initialize Audio Context
     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Initialize Streaming Features (CUE, Staging, Recording)
+    this.cueSystem = new CueSystem(this.audioContext);
+    this.trackStaging = new TrackStaging();
+
+    // Create master gain node for recording
+    this.masterGainNode = this.audioContext.createGain();
+    this.masterGainNode.connect(this.audioContext.destination);
+    this.recorder = new MixRecorder(this.masterGainNode);
 
     // Initialize Core Modules based on mode
     this.tutorial = new DJTutorial();
@@ -263,9 +278,17 @@ class BiGoDJApp {
       this.togglePlay('A');
     });
 
+    document.getElementById('cue-a').addEventListener('click', () => {
+      this.cueSystem.toggleCue('A');
+    });
+
     // Deck B Controls
     document.getElementById('play-b').addEventListener('click', () => {
       this.togglePlay('B');
+    });
+
+    document.getElementById('cue-b').addEventListener('click', () => {
+      this.cueSystem.toggleCue('B');
     });
 
     // Sync Button
@@ -336,6 +359,27 @@ class BiGoDJApp {
       this.updateTrackBrowser();
     });
 
+    // Recording Button
+    document.getElementById('record-btn').addEventListener('click', () => {
+      if (this.recorder.isRecording) {
+        this.recorder.stopRecording();
+        this.updateStatus('Recording stopped');
+      } else {
+        const result = this.recorder.startRecording();
+        if (result.success) {
+          this.updateStatus('Recording started');
+        } else {
+          this.updateStatus(`Recording error: ${result.error}`);
+        }
+      }
+    });
+
+    // Track Staging - Load staged track
+    window.addEventListener('load_staged', (e) => {
+      const { track, deck } = e.detail;
+      this.loadTrack(track, deck);
+    });
+
     // Start waveform animation
     this.startWaveformAnimation();
   }
@@ -390,17 +434,20 @@ class BiGoDJApp {
 
     // Add click handlers
     browser.querySelectorAll('.track-item').forEach(item => {
+      // Single click - Stage track for loading
       item.addEventListener('click', () => {
         const trackId = item.dataset.trackId;
         const track = displayTracks.find(t => t.id === trackId);
-        this.loadTrack(track, this.currentDeck);
+        this.trackStaging.stageTrack(track, this.currentDeck);
+        this.updateStatus(`Staged "${track.name}" for Deck ${this.currentDeck}`);
       });
 
+      // Double click - Load and play immediately
       item.addEventListener('dblclick', () => {
         const trackId = item.dataset.trackId;
         const track = displayTracks.find(t => t.id === trackId);
         this.loadTrack(track, this.currentDeck);
-        this.togglePlay(this.currentDeck);
+        setTimeout(() => this.togglePlay(this.currentDeck), 100);
       });
     });
 
@@ -489,10 +536,20 @@ class BiGoDJApp {
 
       // Add click handlers
       panel.querySelectorAll('.suggestion-item').forEach(item => {
+        // Single click - Stage track
         item.addEventListener('click', () => {
           const trackId = item.dataset.trackId;
           const track = suggestions.find(t => t.id === trackId);
+          this.trackStaging.stageTrack(track, this.currentDeck);
+          this.updateStatus(`Staged "${track.name}" for Deck ${this.currentDeck}`);
+        });
+
+        // Double click - Load and play immediately
+        item.addEventListener('dblclick', () => {
+          const trackId = item.dataset.trackId;
+          const track = suggestions.find(t => t.id === trackId);
           this.loadTrack(track, this.currentDeck);
+          setTimeout(() => this.togglePlay(this.currentDeck), 100);
         });
       });
     } catch (err) {

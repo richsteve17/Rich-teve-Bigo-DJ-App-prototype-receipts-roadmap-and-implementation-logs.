@@ -29,6 +29,14 @@
     <div class="main-container">
       <!-- Left Sidebar - Track Browser -->
       <aside class="sidebar-left">
+        <!-- Track Staging Area -->
+        <div id="staging-area" class="staging-area">
+          <div class="staging-empty">
+            <p>📋 No track staged</p>
+            <p class="staging-hint">Click any track to prepare it for loading</p>
+          </div>
+        </div>
+
         <div class="search-section">
           <input type="text" id="track-search" placeholder="Search tracks..." />
           <button id="upload-btn" class="btn-secondary">Upload Files</button>
@@ -77,6 +85,7 @@
 
             <div class="track-controls">
               <button class="play-button" id="play-a">▶</button>
+              <button class="cue-button" id="cue-a">CUE A</button>
               <div class="bpm-display">
                 <span id="bpm-a">--</span>
                 <label>BPM</label>
@@ -150,6 +159,7 @@
 
             <div class="track-controls">
               <button class="play-button" id="play-b">▶</button>
+              <button class="cue-button" id="cue-b">CUE B</button>
               <div class="bpm-display">
                 <span id="bpm-b">--</span>
                 <label>BPM</label>
@@ -210,7 +220,11 @@
         <span id="track-count">0 tracks</span>
       </div>
       <div class="status-item">
-        <span id="streaming-status">Not Streaming</span>
+        <button id="record-btn" class="record-button">⏺ RECORD</button>
+      </div>
+      <div class="status-item" id="recording-indicator" style="display: none;">
+        <span class="rec-dot"></span>
+        <span id="recording-timer">0:00</span>
       </div>
     </footer>
   </div>

@@ -1187,6 +1187,264 @@ body {
   cursor: pointer;
 }
 
+/* Staging Area */
+.staging-area {
+  padding: 1rem;
+  background: var(--bg-tertiary);
+  border-bottom: 2px solid var(--accent-primary);
+  margin-bottom: 0.5rem;
+}
+
+.staging-empty {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-secondary);
+}
+
+.staging-empty p {
+  margin: 0.25rem 0;
+}
+
+.staging-hint {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.staged-track {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid var(--accent-primary);
+}
+
+.staged-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.staged-badge {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.btn-icon {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.staged-info {
+  margin-bottom: 0.75rem;
+}
+
+.staged-title {
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+}
+
+.staged-artist {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.staged-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.btn-load-staged {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border: none;
+  color: white;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.btn-load-staged:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 217, 255, 0.4);
+}
+
+/* CUE Button */
+.cue-button {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+
+.cue-button:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.cue-button.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 15px rgba(0, 217, 255, 0.5);
+  animation: pulse 1.5s infinite;
+}
+
+/* Recording Controls */
+.record-button {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.record-button:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  transform: translateY(-2px);
+}
+
+.record-button.recording {
+  background: var(--danger);
+  border-color: var(--danger);
+  animation: pulse 2s infinite;
+}
+
+.rec-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--danger);
+  margin-right: 0.5rem;
+  animation: pulse 1s infinite;
+}
+
+#recording-indicator {
+  color: var(--danger);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+}
+
+/* Recording Complete Modal */
+.recording-complete-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recording-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.recording-complete {
+  position: relative;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--accent-primary);
+}
+
+.recording-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.recording-stats {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent-primary);
+}
+
+.recording-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+.recording-close {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .main-container {
@@ -1228,5 +1486,24 @@ body {
 
   .disclaimer-content {
     width: 95%;
+  }
+
+  /* Mobile touch optimizations */
+  .cue-button,
+  .play-button,
+  .record-button {
+    min-height: 44px;
+    min-width: 44px;
+    font-size: 1rem;
+  }
+
+  .track-controls {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .staging-area {
+    max-height: 150px;
+    overflow-y: auto;
   }
 }
