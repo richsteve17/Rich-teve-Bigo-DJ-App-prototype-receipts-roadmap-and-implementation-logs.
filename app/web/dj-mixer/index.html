@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>BIGO DJ - AI-Powered DJ Mixer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <div class="logo">BIGO DJ</div>
+      <div class="top-controls">
+        <button id="tutorial-btn" class="icon-btn" title="Tutorial">
+          <span>📚</span>
+        </button>
+        <button id="spotify-login" class="icon-btn" title="Connect Spotify">
+          <span>🎵</span>
+        </button>
+        <button id="settings-btn" class="icon-btn" title="Settings">
+          <span>⚙️</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="main-container">
+      <!-- Left Sidebar - Track Browser -->
+      <aside class="sidebar-left">
+        <!-- Track Staging Area -->
+        <div id="staging-area" class="staging-area">
+          <div class="staging-empty">
+            <p>📋 No track staged</p>
+            <p class="staging-hint">Click any track to prepare it for loading</p>
+          </div>
+        </div>
+
+        <div class="search-section">
+          <input type="text" id="track-search" placeholder="Search tracks..." />
+          <button id="upload-btn" class="btn-secondary">Upload Files</button>
+          <input type="file" id="file-upload" multiple accept="audio/*" style="display: none;">
+        </div>
+
+        <div class="filter-controls">
+          <label>
+            <input type="checkbox" id="filter-safe-only"> Streamer Safe Only
+          </label>
+          <select id="source-filter">
+            <option value="all">All Sources</option>
+            <option value="spotify">Spotify</option>
+            <option value="local">Local Files</option>
+          </select>
+        </div>
+
+        <div id="track-browser" class="track-list">
+          <!-- Track items populated by JS -->
+        </div>
+      </aside>
+
+      <!-- Center - DJ Mixer -->
+      <main class="mixer-section">
+        <!-- Waveforms -->
+        <div id="waveforms" class="waveforms">
+          <canvas id="waveform-a" class="waveform"></canvas>
+          <canvas id="waveform-b" class="waveform"></canvas>
+        </div>
+
+        <!-- Decks -->
+        <div class="decks">
+          <!-- Deck A -->
+          <div id="deck-a" class="deck">
+            <div class="deck-header">
+              <span class="deck-label">DECK A</span>
+              <div id="safety-indicator-a" class="safety-indicator">
+                <span class="safety-dot"></span>
+              </div>
+            </div>
+
+            <div class="track-info">
+              <div class="track-title" id="track-title-a">No Track Loaded</div>
+              <div class="track-artist" id="track-artist-a"></div>
+            </div>
+
+            <div class="track-controls">
+              <button class="play-button" id="play-a">▶</button>
+              <button class="cue-button" id="cue-a">CUE A</button>
+              <div class="bpm-display">
+                <span id="bpm-a">--</span>
+                <label>BPM</label>
+              </div>
+            </div>
+
+            <div class="eq-section">
+              <div class="eq-knob">
+                <label>HIGH</label>
+                <input type="range" class="eq-high" min="-24" max="24" value="0" step="0.1">
+                <span class="eq-value">0</span>
+              </div>
+              <div class="eq-knob">
+                <label>MID</label>
+                <input type="range" class="eq-mid" min="-24" max="24" value="0" step="0.1">
+                <span class="eq-value">0</span>
+              </div>
+              <div class="eq-knob">
+                <label>LOW</label>
+                <input type="range" class="eq-low" min="-24" max="24" value="0" step="0.1">
+                <span class="eq-value">0</span>
+              </div>
+            </div>
+
+            <div class="volume-control">
+              <input type="range" class="volume-fader" id="volume-a" min="0" max="1" step="0.01" value="0.8" orient="vertical">
+            </div>
+          </div>
+
+          <!-- Center Mixer Controls -->
+          <div class="mixer-controls">
+            <div class="sync-controls">
+              <button id="sync-button" class="btn-sync">SYNC</button>
+              <div id="beat-match-indicator" class="beat-match-indicator">
+                <div class="match-bar"></div>
+                <span class="match-quality">--</span>
+              </div>
+            </div>
+
+            <div id="crossfader-section" class="crossfader-section">
+              <div class="crossfader-labels">
+                <span>A</span>
+                <span>B</span>
+              </div>
+              <input type="range" id="crossfader" class="crossfader" min="-1" max="1" step="0.01" value="0">
+              <div class="crossfader-position">50%</div>
+            </div>
+
+            <div class="master-controls">
+              <div class="master-volume">
+                <label>MASTER</label>
+                <input type="range" id="master-volume" min="0" max="1" step="0.01" value="0.7" orient="vertical">
+                <span id="master-value">70%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deck B -->
+          <div id="deck-b" class="deck">
+            <div class="deck-header">
+              <span class="deck-label">DECK B</span>
+              <div id="safety-indicator-b" class="safety-indicator">
+                <span class="safety-dot"></span>
+              </div>
+            </div>
+
+            <div class="track-info">
+              <div class="track-title" id="track-title-b">No Track Loaded</div>
+              <div class="track-artist" id="track-artist-b"></div>
+            </div>
+
+            <div class="track-controls">
+              <button class="play-button" id="play-b">▶</button>
+              <button class="cue-button" id="cue-b">CUE B</button>
+              <div class="bpm-display">
+                <span id="bpm-b">--</span>
+                <label>BPM</label>
+              </div>
+            </div>
+
+            <div class="eq-section">
+              <div class="eq-knob">
+                <label>HIGH</label>
+                <input type="range" class="eq-high" min="-24" max="24" value="0" step="0.1">
+                <span class="eq-value">0</span>
+              </div>
+              <div class="eq-knob">
+                <label>MID</label>
+                <input type="range" class="eq-mid" min="-24" max="24" value="0" step="0.1">
+                <span class="eq-value">0</span>
+              </div>
+              <div class="eq-knob">
+                <label>LOW</label>
+                <input type="range" class="eq-low" min="-24" max="24" value="0" step="0.1">
+                <span class="eq-value">0</span>
+              </div>
+            </div>
+
+            <div class="volume-control">
+              <input type="range" class="volume-fader" id="volume-b" min="0" max="1" step="0.01" value="0.8" orient="vertical">
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Right Sidebar - AI Suggestions -->
+      <aside class="sidebar-right">
+        <div class="panel-header">
+          <h3>AI Suggestions</h3>
+          <button id="refresh-suggestions" class="icon-btn-small">🔄</button>
+        </div>
+
+        <div id="suggestions-panel" class="suggestions-list">
+          <!-- AI suggestions populated by JS -->
+          <div class="empty-state">
+            <p>Load a track to get AI-powered suggestions</p>
+          </div>
+        </div>
+
+        <div class="panel-footer">
+          <button id="auto-dj-toggle" class="btn-secondary">Enable Auto DJ</button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Status Bar -->
+    <footer class="status-bar">
+      <div class="status-item">
+        <span id="room-status">Initializing...</span>
+      </div>
+      <div class="status-item">
+        <span id="track-count">0 tracks</span>
+      </div>
+      <div class="status-item">
+        <button id="record-btn" class="record-button">⏺ RECORD</button>
+      </div>
+      <div class="status-item" id="recording-indicator" style="display: none;">
+        <span class="rec-dot"></span>
+        <span id="recording-timer">0:00</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modals & Overlays -->
+  <div id="modal-container"></div>
+
+  <!-- Scripts -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

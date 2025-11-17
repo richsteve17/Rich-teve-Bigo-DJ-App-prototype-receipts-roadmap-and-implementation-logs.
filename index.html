@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIGO DJ - Server Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0e27, #1a1f3a);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            background: rgba(26, 31, 58, 0.8);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 2px solid #00d9ff;
+        }
+        h1 {
+            background: linear-gradient(135deg, #00d9ff, #7000ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 0 1rem;
+        }
+        .success {
+            color: #48bb78;
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        a {
+            display: inline-block;
+            background: linear-gradient(135deg, #00d9ff, #7000ff);
+            color: white;
+            text-decoration: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-weight: 700;
+            margin: 1rem 0;
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 217, 255, 0.3);
+        }
+        .info {
+            background: rgba(0, 217, 255, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid #00d9ff;
+        }
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success">✓</div>
+        <h1>Server is Running!</h1>
+
+        <p>Your BIGO DJ app server is live and ready.</p>
+
+        <div class="info">
+            <strong>Server URL:</strong><br>
+            <code id="server-url">http://127.0.0.1:8080</code>
+        </div>
+
+        <a href="/app/web/dj-mixer/index.html">🎵 Launch DJ App</a>
+
+        <div class="info">
+            <strong>📱 Mobile Access:</strong><br>
+            Open this on your phone (same WiFi):<br>
+            <code>http://21.0.0.86:8080/app/web/dj-mixer/index.html</code>
+        </div>
+
+        <div class="info">
+            <strong>Quick Tips:</strong>
+            <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                <li>Select <strong>Demo Mode</strong> for instant testing (no Spotify needed)</li>
+                <li>8 preloaded tracks ready to mix</li>
+                <li>All features work: CUE, staging, recording, beat matching</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Update server URL if accessed from different IP
+        if (window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
+            document.getElementById('server-url').textContent = window.location.origin;
+        }
+    </script>
+</body>
+</html>
