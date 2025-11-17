@@ -406,10 +406,10 @@ class BiGoDJApp {
 
   updateTrackBrowser(tracks = this.allTracks) {
     const browser = document.getElementById('track-browser');
-    const safeOnly = document.getElementById('filter-safe-only').checked;
+    const safeOnly = document.getElementById('filter-safe-only')?.checked || false;
 
     let displayTracks = tracks;
-    if (safeOnly) {
+    if (safeOnly && this.contentFilter) {
       displayTracks = this.contentFilter.filterSafeTracks(tracks);
     }
 
@@ -419,14 +419,18 @@ class BiGoDJApp {
     }
 
     browser.innerHTML = displayTracks.map(track => {
-      const safety = this.contentFilter.assessTrack(track);
+      // Only assess track safety if contentFilter is available (Full Mode)
+      const safety = this.contentFilter
+        ? this.contentFilter.assessTrack(track)
+        : { status: 'safe', safetyScore: 1.0 };
+
       return `
         <div class="track-item" data-track-id="${track.id}">
           <div class="track-item-title">${track.name}</div>
           <div class="track-item-artist">${track.artist}</div>
           <div class="track-item-meta">
             <span>${track.bpm || '--'} BPM</span>
-            <span class="safety-badge ${safety.status}">${safety.status}</span>
+            ${this.contentFilter ? `<span class="safety-badge ${safety.status}">${safety.status}</span>` : ''}
           </div>
         </div>
       `;
@@ -472,11 +476,13 @@ class BiGoDJApp {
       document.getElementById(`track-artist-${deck.toLowerCase()}`).textContent = track.artist;
       document.getElementById(`bpm-${deck.toLowerCase()}`).textContent = track.bpm || '--';
 
-      // Update safety indicator
-      const safety = this.contentFilter.assessTrack(track);
-      const indicator = document.getElementById(`safety-indicator-${deck.toLowerCase()}`);
-      const dot = indicator.querySelector('.safety-dot');
-      dot.className = `safety-dot ${safety.status}`;
+      // Update safety indicator (only in Full Mode)
+      if (this.contentFilter) {
+        const safety = this.contentFilter.assessTrack(track);
+        const indicator = document.getElementById(`safety-indicator-${deck.toLowerCase()}`);
+        const dot = indicator.querySelector('.safety-dot');
+        dot.className = `safety-dot ${safety.status}`;
+      }
 
       // Update current deck
       this.currentDeck = deck === 'A' ? 'B' : 'A';
