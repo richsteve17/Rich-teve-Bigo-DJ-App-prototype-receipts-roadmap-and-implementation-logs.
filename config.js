@@ -7,7 +7,9 @@ export const config = {
   // Get your credentials at: https://developer.spotify.com/dashboard
   spotify: {
     clientId: 'YOUR_SPOTIFY_CLIENT_ID', // Replace with your Spotify app client ID
-    redirectUri: window.location.origin + '/callback', // OAuth callback URL
+    // IMPORTANT: Spotify requires explicit loopback IP (127.0.0.1), NOT localhost
+    // When testing locally, use: http://127.0.0.1:8080/app/web/dj-mixer/callback.html
+    redirectUri: 'http://127.0.0.1:8080/app/web/dj-mixer/callback.html',
     scopes: [
       'streaming',                    // Web Playback SDK
       'user-read-email',
