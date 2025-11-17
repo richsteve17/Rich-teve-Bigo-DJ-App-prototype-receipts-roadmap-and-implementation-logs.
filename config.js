@@ -6,7 +6,7 @@ export const config = {
   // Spotify Web API Configuration
   // Get your credentials at: https://developer.spotify.com/dashboard
   spotify: {
-    clientId: 'YOUR_SPOTIFY_CLIENT_ID', // Replace with your Spotify app client ID
+    clientId: '29de935743cf4c91bc0a07054077b039', // Spotify app client ID
     // IMPORTANT: Spotify requires explicit loopback IP (127.0.0.1), NOT localhost
     // When testing locally, use: http://127.0.0.1:8080/app/web/dj-mixer/callback.html
     redirectUri: 'http://127.0.0.1:8080/app/web/dj-mixer/callback.html',
