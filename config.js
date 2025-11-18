@@ -8,11 +8,13 @@ const redirectUri = isProduction
   ? 'https://richsteve17.github.io/Rich-teve-Bigo-DJ-App-prototype-receipts-roadmap-and-implementation-logs./app/web/dj-mixer/callback.html'
   : 'http://127.0.0.1:8000/app/web/dj-mixer/callback.html';
 
+const spotifyClientId = resolveSpotifyClientId();
+
 export const config = {
   // Spotify Web API Configuration
   // Get your credentials at: https://developer.spotify.com/dashboard
   spotify: {
-    clientId: '29de935743cf4c91bc0a07054077b039', // Spotify app client ID
+    clientId: spotifyClientId, // Injected at build/runtime via env.js
     // Auto-detected based on environment:
     // - Production (GitHub Pages): https://richsteve17.github.io/.../callback.html
     // - Local development: http://127.0.0.1:8000/app/web/dj-mixer/callback.html
@@ -75,6 +77,20 @@ export const config = {
     visualizationType: 'waveform'      // waveform | spectrum | circular
   }
 };
+
+function resolveSpotifyClientId() {
+  const env = globalThis.__DJ_APP_ENV__ || {};
+  const injectedId = env.SPOTIFY_CLIENT_ID || env.spotifyClientId;
+
+  if (!injectedId) {
+    console.warn(
+      'Spotify Client ID is not configured. Create env.js from env.template.js to enable Spotify features.'
+    );
+    return null;
+  }
+
+  return injectedId;
+}
 
 // Helper: Generate PKCE code verifier and challenge
 function generateCodeVerifier() {
