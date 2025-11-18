@@ -234,21 +234,50 @@ export class LocalTrackLibrary {
  * Local Track Player - plays native audio files
  */
 export class LocalTrackPlayer {
-  constructor(audioContext) {
+  constructor(audioContext, outputNode = null) {
     this.audioContext = audioContext;
     this.audioElement = null;
     this.sourceNode = null;
     this.gainNode = audioContext.createGain();
     this.analyser = audioContext.createAnalyser();
+    this.outputNode = outputNode;
+
+    // Create EQ filters
+    this.eqLow = audioContext.createBiquadFilter();
+    this.eqMid = audioContext.createBiquadFilter();
+    this.eqHigh = audioContext.createBiquadFilter();
+
+    // Configure EQ filters
+    this.eqLow.type = 'lowshelf';
+    this.eqLow.frequency.value = 250;
+    this.eqLow.gain.value = 0;
+
+    this.eqMid.type = 'peaking';
+    this.eqMid.frequency.value = 2500;
+    this.eqMid.Q.value = 1.0;
+    this.eqMid.gain.value = 0;
+
+    this.eqHigh.type = 'highshelf';
+    this.eqHigh.frequency.value = 10000;
+    this.eqHigh.gain.value = 0;
 
     this.analyser.fftSize = 2048;
     this.analyser.smoothingTimeConstant = 0.8;
 
-    this.gainNode.connect(this.analyser);
-    this.analyser.connect(audioContext.destination);
+    // Chain: source -> gain -> EQ (low -> mid -> high) -> analyser -> output
+    this.gainNode.connect(this.eqLow);
+    this.eqLow.connect(this.eqMid);
+    this.eqMid.connect(this.eqHigh);
+    this.eqHigh.connect(this.analyser);
+    if (this.outputNode) {
+      this.analyser.connect(this.outputNode);
+    } else {
+      this.analyser.connect(audioContext.destination);
+    }
 
     this.currentTrack = null;
     this.isPlaying = false;
+    this.deckVolume = 0.8;
   }
 
   /**
@@ -336,8 +365,38 @@ export class LocalTrackPlayer {
   /**
    * Set volume (0.0 - 1.0)
    */
-  setVolume(volume) {
-    this.gainNode.gain.value = Math.max(0, Math.min(1, volume));
+  async setVolume(volume) {
+    this.deckVolume = Math.max(0, Math.min(1, volume));
+    this.gainNode.gain.value = this.deckVolume;
+  }
+
+  /**
+   * Set crossfader position (-1 to 1)
+   * This method exists for compatibility with DJDeck interface
+   * For local playback, crossfader is handled by Crossfader class on gain nodes
+   */
+  async setCrossfaderPosition(position) {
+    // For local files, the Crossfader class handles the gain nodes directly
+    // This method is here for interface compatibility with Spotify DJDeck
+    return Promise.resolve();
+  }
+
+  /**
+   * Set EQ levels (-24 to +24 dB)
+   */
+  setEQ(band, gain) {
+    gain = Math.max(-24, Math.min(24, gain));
+    switch(band) {
+      case 'low':
+        this.eqLow.gain.value = gain;
+        break;
+      case 'mid':
+        this.eqMid.gain.value = gain;
+        break;
+      case 'high':
+        this.eqHigh.gain.value = gain;
+        break;
+    }
   }
 
   /**

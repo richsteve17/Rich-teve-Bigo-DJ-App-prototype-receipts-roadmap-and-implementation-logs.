@@ -3,6 +3,7 @@
 // Provides deck control, playback state, and audio node access
 
 import { getValidToken } from '../../../config.js';
+import { spotifyAnalyzer } from './audioAnalysis.js';
 
 /**
  * Spotify Web Playback SDK Player wrapper
@@ -293,6 +294,10 @@ export class DJDeck {
     this.lastSpotifyVolumeUpdate = 0;
     this.volumeUpdateTimeout = null;
     this.volumeUpdatePromise = null;
+
+    // Audio analysis for visualization (workaround for no audio stream)
+    this.audioAnalysis = null;
+    this.waveformCache = null;
   }
 
   /**
@@ -315,6 +320,23 @@ export class DJDeck {
     this.bpm = bpm;
     await this.spotifyPlayer.play(uri);
     this.currentTrack = { uri, bpm };
+
+    // Extract track ID from URI (spotify:track:ID)
+    const trackId = uri.split(':').pop();
+
+    // Fetch audio analysis for visualization
+    try {
+      this.audioAnalysis = await spotifyAnalyzer.getAnalysis(trackId);
+      if (this.audioAnalysis) {
+        // Pre-generate waveform data
+        this.waveformCache = spotifyAnalyzer.generateWaveformData(this.audioAnalysis, 512);
+        console.log('✅ Audio analysis loaded for visualization');
+      }
+    } catch (err) {
+      console.warn('Could not load audio analysis:', err);
+      this.audioAnalysis = null;
+      this.waveformCache = null;
+    }
   }
 
   /**
@@ -443,22 +465,57 @@ export class DJDeck {
 
   /**
    * Get frequency data for visualization
+   * Uses Spotify Audio Analysis API instead of Web Audio stream
    */
-  getFrequencyData() {
+  async getFrequencyData() {
     const bufferLength = this.analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    // Return empty data for Spotify (no access to audio stream)
-    return dataArray;
+
+    if (!this.audioAnalysis) {
+      return new Uint8Array(bufferLength);
+    }
+
+    try {
+      // Get current playback position
+      const currentTime = await this.getCurrentTime();
+
+      // Find current segment
+      const segment = spotifyAnalyzer.getCurrentSegment(this.audioAnalysis, currentTime / 1000);
+
+      if (segment) {
+        return spotifyAnalyzer.getFrequencyData(segment);
+      }
+    } catch (err) {
+      // Silently fail
+    }
+
+    return new Uint8Array(bufferLength);
   }
 
   /**
    * Get waveform data
+   * Uses pre-generated waveform from Spotify Audio Analysis
    */
   getWaveformData() {
     const bufferLength = this.analyser.fftSize;
-    const dataArray = new Uint8Array(bufferLength);
-    // Return empty data for Spotify (no access to audio stream)
-    return dataArray;
+
+    // Return cached waveform if available
+    if (this.waveformCache && this.waveformCache.length > 0) {
+      // Scale cached waveform to match expected buffer length
+      if (this.waveformCache.length === bufferLength) {
+        return this.waveformCache;
+      } else {
+        // Resample to match buffer length
+        const resampled = new Uint8Array(bufferLength);
+        for (let i = 0; i < bufferLength; i++) {
+          const srcIdx = Math.floor((i / bufferLength) * this.waveformCache.length);
+          resampled[i] = this.waveformCache[srcIdx];
+        }
+        return resampled;
+      }
+    }
+
+    // Return empty data if no analysis
+    return new Uint8Array(bufferLength);
   }
 
   /**

@@ -16,6 +16,8 @@ import { showModeSelector, createModeIndicator, confirmModeChange, showFirstTime
 import { showDisclaimer, maybeShowDisclaimer, createWarningBadge, createInfoBadge } from '../../ui/components/disclaimers.js';
 import { CueSystem, TrackStaging } from '../../core/streaming/cueing.js';
 import { MixRecorder } from '../../core/streaming/recording.js';
+import { CameraManager } from '../../core/streaming/camera.js';
+import { Soundboard } from '../../core/effects/soundboard.js';
 
 class BiGoDJApp {
   constructor() {
@@ -33,6 +35,8 @@ class BiGoDJApp {
     this.cueSystem = null;
     this.trackStaging = null;
     this.recorder = null;
+    this.camera = null;
+    this.soundboard = null;
     this.masterGainNode = null;
     this.allTracks = [];
     this.currentDeck = 'A';
@@ -64,14 +68,19 @@ class BiGoDJApp {
     // Initialize Audio Context
     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    // Initialize Streaming Features (CUE, Staging, Recording)
+    // Initialize Streaming Features (CUE, Staging, Recording, Camera)
     this.cueSystem = new CueSystem(this.audioContext);
     this.trackStaging = new TrackStaging();
+    this.camera = new CameraManager();
 
     // Create master gain node for recording
     this.masterGainNode = this.audioContext.createGain();
     this.masterGainNode.connect(this.audioContext.destination);
     this.recorder = new MixRecorder(this.masterGainNode);
+
+    // Initialize Soundboard (routes to master)
+    this.soundboard = new Soundboard(this.audioContext, this.masterGainNode);
+    await this.soundboard.loadDefaultSamples();
 
     // Initialize Core Modules based on mode
     this.tutorial = new DJTutorial();
@@ -219,13 +228,23 @@ class BiGoDJApp {
   async initDecks() {
     const mode = this.modeManager.getMode();
 
-    // Create gain nodes for decks
-    const deckAGain = this.audioContext.createGain();
-    const deckBGain = this.audioContext.createGain();
+    // Audio routing: Deck -> CUE Gain -> Crossfader Gain -> Master -> Destination
 
-    // Connect to master output
-    deckAGain.connect(this.masterGainNode);
-    deckBGain.connect(this.masterGainNode);
+    // Get CUE system gain nodes
+    const cueGainA = this.cueSystem.getCueGain('A');
+    const cueGainB = this.cueSystem.getCueGain('B');
+
+    // Create crossfader gain nodes
+    const crossfaderGainA = this.audioContext.createGain();
+    const crossfaderGainB = this.audioContext.createGain();
+
+    // Wire: CUE gains -> Crossfader gains -> Master
+    cueGainA.disconnect(); // Disconnect from CUE system's master
+    cueGainB.disconnect();
+    cueGainA.connect(crossfaderGainA);
+    cueGainB.connect(crossfaderGainB);
+    crossfaderGainA.connect(this.masterGainNode);
+    crossfaderGainB.connect(this.masterGainNode);
 
     // Initialize decks based on mode and authentication
     if (mode === AppMode.FULL && isAuthenticated()) {
@@ -242,21 +261,21 @@ class BiGoDJApp {
       } catch (err) {
         console.error('Spotify player init failed:', err);
         this.updateStatus('Spotify player error - using local playback');
-        // Fallback to local players
-        this.deckA = new LocalTrackPlayer(this.audioContext);
-        this.deckB = new LocalTrackPlayer(this.audioContext);
+        // Fallback to local players with CUE routing
+        this.deckA = new LocalTrackPlayer(this.audioContext, cueGainA);
+        this.deckB = new LocalTrackPlayer(this.audioContext, cueGainB);
       }
     } else {
-      // Use local track players for Demo and Simple modes
-      this.deckA = new LocalTrackPlayer(this.audioContext);
-      this.deckB = new LocalTrackPlayer(this.audioContext);
+      // Use local track players for Demo and Simple modes, routed through CUE system
+      this.deckA = new LocalTrackPlayer(this.audioContext, cueGainA);
+      this.deckB = new LocalTrackPlayer(this.audioContext, cueGainB);
     }
 
     // Setup beat matcher
     this.beatMatcher = new BeatMatcher(this.deckA, this.deckB);
 
-    // Setup crossfader
-    this.crossfader = new Crossfader(deckAGain, deckBGain);
+    // Setup crossfader (controls the crossfader gain nodes)
+    this.crossfader = new Crossfader(crossfaderGainA, crossfaderGainB);
   }
 
   setupEventListeners() {
@@ -411,10 +430,55 @@ class BiGoDJApp {
       }
     });
 
+    // Camera Button
+    document.getElementById('camera-btn').addEventListener('click', async () => {
+      const result = await this.camera.toggle();
+      const videoElement = document.getElementById('camera-preview');
+      const button = document.getElementById('camera-btn');
+
+      if (result.success) {
+        if (this.camera.isRunning()) {
+          videoElement.style.display = 'block';
+          button.classList.add('active');
+          button.textContent = '📹 STOP CAM';
+          this.updateStatus('Camera started');
+        } else {
+          videoElement.style.display = 'none';
+          button.classList.remove('active');
+          button.textContent = '📹 CAMERA';
+          this.updateStatus('Camera stopped');
+        }
+      } else {
+        this.updateStatus(`Camera error: ${result.error}`);
+        alert(`Camera Error: ${result.error}\n\nPlease check your browser permissions.`);
+      }
+    });
+
     // Track Staging - Load staged track
     window.addEventListener('load_staged', (e) => {
       const { track, deck } = e.detail;
       this.loadTrack(track, deck);
+    });
+
+    // Waveform Scrubbing - Click to seek
+    document.getElementById('waveform-a').addEventListener('click', (e) => {
+      this.scrubWaveform(e, 'A');
+    });
+
+    document.getElementById('waveform-b').addEventListener('click', (e) => {
+      this.scrubWaveform(e, 'B');
+    });
+
+    // Soundboard Pads
+    document.querySelectorAll('.sound-pad').forEach(pad => {
+      pad.addEventListener('click', (e) => {
+        const padId = e.target.dataset.pad;
+        const result = this.soundboard.play(padId, 0.8);
+        if (result.success) {
+          e.target.classList.add('active');
+          setTimeout(() => e.target.classList.remove('active'), 200);
+        }
+      });
     });
 
     // Start waveform animation
@@ -553,6 +617,37 @@ class BiGoDJApp {
     } else {
       button.textContent = '▶';
       button.classList.remove('playing');
+    }
+  }
+
+  scrubWaveform(event, deck) {
+    const targetDeck = deck === 'A' ? this.deckA : this.deckB;
+    const canvas = event.target;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const percentage = x / rect.width;
+
+    // Get track duration
+    let duration = 0;
+    if (targetDeck.currentTrack) {
+      // For Spotify tracks
+      if (targetDeck.currentTrack.duration_ms) {
+        duration = targetDeck.currentTrack.duration_ms / 1000;
+      }
+      // For local tracks
+      else if (targetDeck.currentTrack.duration) {
+        duration = targetDeck.currentTrack.duration / 1000;
+      }
+      // Fallback: try to get from audio element
+      else if (targetDeck.audioElement && targetDeck.audioElement.duration) {
+        duration = targetDeck.audioElement.duration;
+      }
+    }
+
+    if (duration > 0) {
+      const seekTime = percentage * duration;
+      targetDeck.seek(seekTime);
+      this.updateStatus(`Scrubbed to ${seekTime.toFixed(1)}s`);
     }
   }
 
