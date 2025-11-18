@@ -4,6 +4,7 @@
 
 import { initSpotifyAPI, searchTracks, isAuthenticated, loginToSpotify } from '../../integrations/spotify/api.js';
 import { SpotifyPlayer, DJDeck } from '../../integrations/spotify/player.js';
+import { SpotifyDeckWithCapture } from '../../integrations/spotify/tabCapture.js';
 import { LocalTrackLibrary, LocalTrackPlayer } from '../../core/library/localTracks.js';
 import { BeatMatcher, Crossfader, AutoDJ } from '../../core/mixing/beatMatching.js';
 import { AIRecommendationEngine, PlaylistGenerator } from '../../ai/recommendations.js';
@@ -250,14 +251,18 @@ class BiGoDJApp {
     if (mode === AppMode.FULL && isAuthenticated()) {
       // Use Spotify Web Playback SDK for Full Mode
       try {
-        this.deckA = new DJDeck('BIGO DJ - Deck A', this.audioContext);
-        this.deckB = new DJDeck('BIGO DJ - Deck B', this.audioContext);
+        const baseDeckA = new DJDeck('BIGO DJ - Deck A', this.audioContext);
+        const baseDeckB = new DJDeck('BIGO DJ - Deck B', this.audioContext);
 
-        await this.deckA.init();
-        await this.deckB.init();
+        await baseDeckA.init();
+        await baseDeckB.init();
 
-        console.log('✅ Spotify Web Playback SDK initialized for both decks');
-        this.updateStatus('Spotify players ready!');
+        // Wrap with tab capture for EQ support
+        this.deckA = new SpotifyDeckWithCapture('BIGO DJ - Deck A', this.audioContext, baseDeckA);
+        this.deckB = new SpotifyDeckWithCapture('BIGO DJ - Deck B', this.audioContext, baseDeckB);
+
+        console.log('✅ Spotify Web Playback SDK initialized with EQ capture support');
+        this.updateStatus('Spotify players ready! Enable EQ mode for full control.');
       } catch (err) {
         console.error('Spotify player init failed:', err);
         this.updateStatus('Spotify player error - using local playback');
@@ -285,6 +290,77 @@ class BiGoDJApp {
         loginToSpotify();
       } else {
         alert('Already connected to Spotify!');
+      }
+    });
+
+    // EQ Mode Toggle (Tab Capture for Spotify)
+    document.getElementById('eq-mode-btn').addEventListener('click', async () => {
+      const button = document.getElementById('eq-mode-btn');
+      const mode = this.modeManager.getMode();
+
+      // Only works with Spotify decks
+      if (mode !== AppMode.FULL || !isAuthenticated()) {
+        alert('EQ Mode requires Spotify authentication in Full Mode');
+        return;
+      }
+
+      // Check if decks support capture mode
+      if (!this.deckA.enableCaptureMode || !this.deckB.enableCaptureMode) {
+        alert('EQ Mode not available (using local playback)');
+        return;
+      }
+
+      // Toggle capture mode
+      if (!this.deckA.captureMode) {
+        // Enable capture mode
+        button.textContent = '⏳ Starting EQ Mode...';
+        button.disabled = true;
+
+        const resultA = await this.deckA.enableCaptureMode(this.cueSystem.getCueGain('A'));
+        const resultB = await this.deckB.enableCaptureMode(this.cueSystem.getCueGain('B'));
+
+        button.disabled = false;
+
+        if (resultA.success && resultB.success) {
+          button.textContent = '🎚️ EQ ON';
+          button.classList.add('active');
+          button.style.backgroundColor = '#00ff88';
+          button.style.color = '#000';
+          this.updateStatus('EQ Mode enabled! Full control active. ~50-100ms latency.');
+
+          // Show explanation
+          alert(
+            '✅ EQ MODE ENABLED\n\n' +
+            'Your EQ knobs now have FULL control over Spotify audio!\n\n' +
+            'How it works:\n' +
+            '• Captures this tab\'s audio\n' +
+            '• Routes through Web Audio API with real EQ processing\n' +
+            '• Adds ~50-100ms latency (normal for DJ mixing)\n\n' +
+            'Tip: Use visual waveforms for beatmatching (latency-compensated)'
+          );
+        } else {
+          button.textContent = '🎚️ EQ';
+          this.updateStatus('EQ Mode failed: ' + (resultA.error || resultB.error));
+          alert(
+            'EQ Mode Setup Failed\n\n' +
+            (resultA.error || resultB.error) + '\n\n' +
+            'Tips:\n' +
+            '• Make sure to select THIS TAB when prompted\n' +
+            '• Check "Share audio" checkbox\n' +
+            '• Use Chrome or Edge browser\n' +
+            '• Grant microphone/screen share permissions'
+          );
+        }
+      } else {
+        // Disable capture mode
+        await this.deckA.disableCaptureMode();
+        await this.deckB.disableCaptureMode();
+
+        button.textContent = '🎚️ EQ';
+        button.classList.remove('active');
+        button.style.backgroundColor = '';
+        button.style.color = '';
+        this.updateStatus('EQ Mode disabled - returned to standard Spotify mode');
       }
     });
 
@@ -772,9 +848,21 @@ class BiGoDJApp {
 
   updateSpotifyButton(authenticated) {
     const btn = document.getElementById('spotify-login');
+    const eqBtn = document.getElementById('eq-mode-btn');
+
     if (authenticated) {
       btn.style.background = 'linear-gradient(135deg, #1DB954, #1ed760)';
       btn.title = 'Spotify Connected';
+
+      // Show EQ mode button for Spotify users
+      if (eqBtn) {
+        eqBtn.style.display = 'inline-block';
+      }
+    } else {
+      // Hide EQ mode button if not authenticated
+      if (eqBtn) {
+        eqBtn.style.display = 'none';
+      }
     }
   }
 
