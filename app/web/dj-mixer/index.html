@@ -21,6 +21,9 @@
         <button id="spotify-login" class="icon-btn" title="Connect Spotify">
           <span>🎵</span>
         </button>
+        <button id="eq-mode-btn" class="icon-btn" title="Enable EQ Mode (Tab Capture)" style="display: none;">
+          <span>🎚️ EQ</span>
+        </button>
         <button id="settings-btn" class="icon-btn" title="Settings">
           <span>⚙️</span>
         </button>
@@ -135,6 +138,16 @@
               <div class="crossfader-position">50%</div>
             </div>
 
+            <div class="soundboard-section">
+              <div class="soundboard-label">SOUND FX</div>
+              <div class="soundboard-pads">
+                <button class="sound-pad" id="sound-pad-1" data-pad="pad1">🔊 HORN</button>
+                <button class="sound-pad" id="sound-pad-2" data-pad="pad2">🥁 KICK</button>
+                <button class="sound-pad" id="sound-pad-3" data-pad="pad3">🥁 SNARE</button>
+                <button class="sound-pad" id="sound-pad-4" data-pad="pad4">🎵 HAT</button>
+              </div>
+            </div>
+
             <div class="master-controls">
               <div class="master-volume">
                 <label>MASTER</label>
@@ -223,12 +236,18 @@
       <div class="status-item">
         <button id="record-btn" class="record-button">⏺ RECORD</button>
       </div>
+      <div class="status-item">
+        <button id="camera-btn" class="camera-button">📹 CAMERA</button>
+      </div>
       <div class="status-item" id="recording-indicator" style="display: none;">
         <span class="rec-dot"></span>
         <span id="recording-timer">0:00</span>
       </div>
     </footer>
   </div>
+
+  <!-- Camera Preview Overlay -->
+  <video id="camera-preview" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 240px; height: 180px; border: 2px solid #00ff88; border-radius: 8px; z-index: 1000;"></video>
 
   <!-- Modals & Overlays -->
   <div id="modal-container"></div>
