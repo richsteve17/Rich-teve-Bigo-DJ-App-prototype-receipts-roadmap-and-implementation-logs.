@@ -247,7 +247,7 @@ export class DJDeck {
     this.audioContext = audioContext;
     this.spotifyPlayer = new SpotifyPlayer(name);
 
-    // Audio nodes for mixing
+    // Audio nodes for mixing (won't work with Spotify, but kept for compatibility)
     this.gainNode = audioContext.createGain();
     this.eqLow = audioContext.createBiquadFilter();
     this.eqMid = audioContext.createBiquadFilter();
@@ -272,7 +272,7 @@ export class DJDeck {
     this.analyser.fftSize = 2048;
     this.analyser.smoothingTimeConstant = 0.8;
 
-    // Chain audio nodes
+    // Chain audio nodes (for local playback compatibility)
     this.gainNode.connect(this.eqLow);
     this.eqLow.connect(this.eqMid);
     this.eqMid.connect(this.eqHigh);
@@ -282,6 +282,10 @@ export class DJDeck {
     this.currentTrack = null;
     this.bpm = 0;
     this.isPlaying = false;
+
+    // Volume state for Spotify mixing
+    this.deckVolume = 0.8;
+    this.crossfaderPosition = 0; // -1 to 1, 0 is center
   }
 
   /**
@@ -315,13 +319,48 @@ export class DJDeck {
 
   /**
    * Set deck volume (0.0 - 1.0)
+   * For Spotify, we control the player volume directly
    */
-  setVolume(volume) {
-    this.gainNode.gain.value = volume;
+  async setVolume(volume) {
+    this.deckVolume = volume;
+    await this.updateSpotifyVolume();
+  }
+
+  /**
+   * Set crossfader position (-1 to 1)
+   * This is called by the crossfader controller
+   */
+  async setCrossfaderPosition(position) {
+    this.crossfaderPosition = position;
+    await this.updateSpotifyVolume();
+  }
+
+  /**
+   * Update Spotify player volume based on deck volume and crossfader
+   */
+  async updateSpotifyVolume() {
+    // Calculate final volume based on crossfader curve
+    let finalVolume = this.deckVolume;
+
+    // Apply crossfader curve (determine if this is deck A or B by name)
+    const isDeckA = this.name.includes('Deck A');
+    if (isDeckA) {
+      // Deck A: fade out as crossfader moves right (positive)
+      const crossfaderGain = this.crossfaderPosition < 0 ? 1 : (1 - this.crossfaderPosition);
+      finalVolume *= crossfaderGain;
+    } else {
+      // Deck B: fade out as crossfader moves left (negative)
+      const crossfaderGain = this.crossfaderPosition > 0 ? 1 : (1 + this.crossfaderPosition);
+      finalVolume *= crossfaderGain;
+    }
+
+    // Set Spotify player volume
+    await this.spotifyPlayer.setVolume(finalVolume);
   }
 
   /**
    * Set EQ levels (-24 to +24 dB)
+   * NOTE: This won't work with Spotify, but we keep it for UI consistency
    */
   setEQ(band, gain) {
     gain = Math.max(-24, Math.min(24, gain));
@@ -339,12 +378,19 @@ export class DJDeck {
   }
 
   /**
+   * Get current playback time
+   */
+  async getCurrentTime() {
+    return await this.spotifyPlayer.getPosition();
+  }
+
+  /**
    * Get frequency data for visualization
    */
   getFrequencyData() {
     const bufferLength = this.analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
-    this.analyser.getByteFrequencyData(dataArray);
+    // Return empty data for Spotify (no access to audio stream)
     return dataArray;
   }
 
@@ -354,7 +400,7 @@ export class DJDeck {
   getWaveformData() {
     const bufferLength = this.analyser.fftSize;
     const dataArray = new Uint8Array(bufferLength);
-    this.analyser.getByteTimeDomainData(dataArray);
+    // Return empty data for Spotify (no access to audio stream)
     return dataArray;
   }
 
