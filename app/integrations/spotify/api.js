@@ -2,7 +2,7 @@
 // Spotify Web API wrapper for BIGO DJ App
 // Handles authentication, track search, audio features, and recommendations
 
-import { getValidToken, storeToken, parseSpotifyToken, getSpotifyAuthUrl } from '../../../config.js';
+import { getValidToken, getSpotifyAuthUrl } from '../../../config.js';
 
 const API_BASE = 'https://api.spotify.com/v1';
 
@@ -10,19 +10,9 @@ const API_BASE = 'https://api.spotify.com/v1';
 let accessToken = null;
 
 /**
- * Initialize Spotify API - check for existing token or handle OAuth callback
+ * Initialize Spotify API - check for existing token
  */
 export function initSpotifyAPI() {
-  // Check if we're on the OAuth callback
-  if (window.location.hash.includes('access_token')) {
-    const tokenData = parseSpotifyToken();
-    storeToken(tokenData);
-    accessToken = tokenData.access_token;
-    // Clean up URL
-    window.history.replaceState({}, document.title, window.location.pathname);
-    return { authenticated: true, token: accessToken };
-  }
-
   // Check for valid stored token
   accessToken = getValidToken();
   return { authenticated: !!accessToken, token: accessToken };
@@ -31,8 +21,9 @@ export function initSpotifyAPI() {
 /**
  * Redirect to Spotify login
  */
-export function loginToSpotify() {
-  window.location.href = getSpotifyAuthUrl();
+export async function loginToSpotify() {
+  const authUrl = await getSpotifyAuthUrl();
+  window.location.href = authUrl;
 }
 
 /**

@@ -217,17 +217,40 @@ class BiGoDJApp {
   }
 
   async initDecks() {
+    const mode = this.modeManager.getMode();
+
     // Create gain nodes for decks
     const deckAGain = this.audioContext.createGain();
     const deckBGain = this.audioContext.createGain();
 
     // Connect to master output
-    deckAGain.connect(this.audioContext.destination);
-    deckBGain.connect(this.audioContext.destination);
+    deckAGain.connect(this.masterGainNode);
+    deckBGain.connect(this.masterGainNode);
 
-    // Initialize local track players
-    this.deckA = new LocalTrackPlayer(this.audioContext);
-    this.deckB = new LocalTrackPlayer(this.audioContext);
+    // Initialize decks based on mode and authentication
+    if (mode === AppMode.FULL && isAuthenticated()) {
+      // Use Spotify Web Playback SDK for Full Mode
+      try {
+        this.deckA = new DJDeck('BIGO DJ - Deck A', this.audioContext);
+        this.deckB = new DJDeck('BIGO DJ - Deck B', this.audioContext);
+
+        await this.deckA.init();
+        await this.deckB.init();
+
+        console.log('✅ Spotify Web Playback SDK initialized for both decks');
+        this.updateStatus('Spotify players ready!');
+      } catch (err) {
+        console.error('Spotify player init failed:', err);
+        this.updateStatus('Spotify player error - using local playback');
+        // Fallback to local players
+        this.deckA = new LocalTrackPlayer(this.audioContext);
+        this.deckB = new LocalTrackPlayer(this.audioContext);
+      }
+    } else {
+      // Use local track players for Demo and Simple modes
+      this.deckA = new LocalTrackPlayer(this.audioContext);
+      this.deckB = new LocalTrackPlayer(this.audioContext);
+    }
 
     // Setup beat matcher
     this.beatMatcher = new BeatMatcher(this.deckA, this.deckB);
@@ -406,10 +429,10 @@ class BiGoDJApp {
 
   updateTrackBrowser(tracks = this.allTracks) {
     const browser = document.getElementById('track-browser');
-    const safeOnly = document.getElementById('filter-safe-only').checked;
+    const safeOnly = document.getElementById('filter-safe-only')?.checked || false;
 
     let displayTracks = tracks;
-    if (safeOnly) {
+    if (safeOnly && this.contentFilter) {
       displayTracks = this.contentFilter.filterSafeTracks(tracks);
     }
 
@@ -419,14 +442,18 @@ class BiGoDJApp {
     }
 
     browser.innerHTML = displayTracks.map(track => {
-      const safety = this.contentFilter.assessTrack(track);
+      // Only assess track safety if contentFilter is available (Full Mode)
+      const safety = this.contentFilter
+        ? this.contentFilter.assessTrack(track)
+        : { status: 'safe', safetyScore: 1.0 };
+
       return `
         <div class="track-item" data-track-id="${track.id}">
           <div class="track-item-title">${track.name}</div>
           <div class="track-item-artist">${track.artist}</div>
           <div class="track-item-meta">
             <span>${track.bpm || '--'} BPM</span>
-            <span class="safety-badge ${safety.status}">${safety.status}</span>
+            ${this.contentFilter ? `<span class="safety-badge ${safety.status}">${safety.status}</span>` : ''}
           </div>
         </div>
       `;
@@ -459,12 +486,19 @@ class BiGoDJApp {
     const deckElement = deck === 'A' ? 'deck-a' : 'deck-b';
 
     try {
-      if (track.source === 'local') {
+      if (track.source === 'local' || track.source === 'demo') {
+        // Local or demo tracks
         await targetDeck.loadTrack(track);
+      } else if (track.uri) {
+        // Spotify tracks - use Web Playback SDK
+        if (typeof targetDeck.loadTrack === 'function' && targetDeck.spotifyPlayer) {
+          // DJDeck with Spotify player
+          await targetDeck.loadTrack(track.uri, track.bpm || track.tempo || 0);
+        } else {
+          throw new Error('Spotify playback not available in this mode');
+        }
       } else {
-        // For Spotify tracks, would use SpotifyPlayer
-        alert('Spotify playback requires Web Playback SDK setup. Use local files for now.');
-        return;
+        throw new Error('Invalid track format');
       }
 
       // Update UI
@@ -472,11 +506,13 @@ class BiGoDJApp {
       document.getElementById(`track-artist-${deck.toLowerCase()}`).textContent = track.artist;
       document.getElementById(`bpm-${deck.toLowerCase()}`).textContent = track.bpm || '--';
 
-      // Update safety indicator
-      const safety = this.contentFilter.assessTrack(track);
-      const indicator = document.getElementById(`safety-indicator-${deck.toLowerCase()}`);
-      const dot = indicator.querySelector('.safety-dot');
-      dot.className = `safety-dot ${safety.status}`;
+      // Update safety indicator (only in Full Mode)
+      if (this.contentFilter) {
+        const safety = this.contentFilter.assessTrack(track);
+        const indicator = document.getElementById(`safety-indicator-${deck.toLowerCase()}`);
+        const dot = indicator.querySelector('.safety-dot');
+        dot.className = `safety-dot ${safety.status}`;
+      }
 
       // Update current deck
       this.currentDeck = deck === 'A' ? 'B' : 'A';
