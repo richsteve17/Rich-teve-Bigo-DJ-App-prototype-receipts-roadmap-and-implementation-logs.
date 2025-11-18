@@ -2,14 +2,21 @@
 // Central configuration for BIGO DJ App
 // IMPORTANT: Never commit actual API keys to git. Use environment variables in production.
 
+// Auto-detect environment and set appropriate redirect URI
+const isProduction = window.location.hostname === 'richsteve17.github.io';
+const redirectUri = isProduction
+  ? 'https://richsteve17.github.io/Rich-teve-Bigo-DJ-App-prototype-receipts-roadmap-and-implementation-logs./app/web/dj-mixer/callback.html'
+  : 'http://127.0.0.1:8000/app/web/dj-mixer/callback.html';
+
 export const config = {
   // Spotify Web API Configuration
   // Get your credentials at: https://developer.spotify.com/dashboard
   spotify: {
     clientId: '29de935743cf4c91bc0a07054077b039', // Spotify app client ID
-    // IMPORTANT: Spotify requires explicit loopback IP (127.0.0.1), NOT localhost
-    // When testing locally, use: http://127.0.0.1:8000/app/web/dj-mixer/callback.html
-    redirectUri: 'http://127.0.0.1:8000/app/web/dj-mixer/callback.html',
+    // Auto-detected based on environment:
+    // - Production (GitHub Pages): https://richsteve17.github.io/.../callback.html
+    // - Local development: http://127.0.0.1:8000/app/web/dj-mixer/callback.html
+    redirectUri: redirectUri,
     scopes: [
       'streaming',                    // Web Playback SDK
       'user-read-email',
