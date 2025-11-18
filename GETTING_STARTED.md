@@ -121,7 +121,9 @@ Get your Spotify API credentials:
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Create a new app
 3. Copy your **Client ID**
-4. Add `http://localhost:8080/callback` to Redirect URIs
+4. Add `http://127.0.0.1:8080/app/web/dj-mixer/callback.html` to Redirect URIs
+   - Spotify prefers `127.0.0.1` over `localhost`, and the app defaults to port `8080`
+   - If you change the port later, update this URI and the `LOCAL_DEV_PORT` constant in `config.js`
 5. Update `config.js` with your Client ID:
 
 ```javascript
@@ -148,11 +150,13 @@ npx http-server -p 8080
 # Right-click on app/web/dj-mixer/index.html -> Open with Live Server
 ```
 
+> Need a different port? Update the `LOCAL_DEV_PORT` constant near the top of `config.js`, run your server on the same port, and update your Spotify Redirect URIs accordingly.
+
 ### 3. **Open in Browser**
 
 Navigate to:
 ```
-http://localhost:8080/app/web/dj-mixer/
+http://127.0.0.1:8080/app/web/dj-mixer/
 ```
 
 ### 4. **Connect Spotify**

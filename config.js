@@ -3,10 +3,34 @@
 // IMPORTANT: Never commit actual API keys to git. Use environment variables in production.
 
 // Auto-detect environment and set appropriate redirect URI
-const isProduction = window.location.hostname === 'richsteve17.github.io';
+const PRODUCTION_HOSTNAME = 'richsteve17.github.io';
+const LOCAL_DEV_PORT = 8080; // Change this if you run the dev server on a different port
+
+const hostname = window.location.hostname || '127.0.0.1';
+const origin = window.location.origin;
+const isProduction = hostname === PRODUCTION_HOSTNAME;
+
+const isLocalHostname = () => {
+  if (!hostname) return true;
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.') ||
+    hostname.endsWith('.local')
+  );
+};
+
+const localRedirectUri = `http://${hostname}:${LOCAL_DEV_PORT}/app/web/dj-mixer/callback.html`;
+const nonProductionRedirectUri = origin && origin !== 'null'
+  ? `${origin}/app/web/dj-mixer/callback.html`
+  : localRedirectUri;
+
 const redirectUri = isProduction
   ? 'https://richsteve17.github.io/Rich-teve-Bigo-DJ-App-prototype-receipts-roadmap-and-implementation-logs./app/web/dj-mixer/callback.html'
-  : 'http://127.0.0.1:8000/app/web/dj-mixer/callback.html';
+  : isLocalHostname()
+    ? localRedirectUri
+    : nonProductionRedirectUri;
 
 export const config = {
   // Spotify Web API Configuration

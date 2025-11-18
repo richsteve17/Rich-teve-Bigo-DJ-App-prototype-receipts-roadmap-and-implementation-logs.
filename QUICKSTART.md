@@ -6,10 +6,12 @@ Get your DJ app running in **under 5 minutes**!
 
 **Perfect for:** Testing features, learning the app, BIGO/SUGO streaming practice
 
-1. **Start a local server:**
+1. **Start a local server (defaults to port 8080):**
    ```bash
    python3 -m http.server 8080
    ```
+
+   > Need to use a different port? Update the `LOCAL_DEV_PORT` constant near the top of `config.js`, then restart your server on that port and update your Spotify redirect URIs to match.
 
 2. **Open the app:**
    ```
@@ -40,6 +42,7 @@ Get your DJ app running in **under 5 minutes**!
    - **Redirect URI:** `http://127.0.0.1:8080/app/web/dj-mixer/callback.html`
      - ⚠️ **IMPORTANT:** Use `127.0.0.1` NOT `localhost` (Spotify requirement)
      - ⚠️ **IMPORTANT:** Use port `8080` to match the local server
+     - 🔁 If you change the port, update both `LOCAL_DEV_PORT` in `config.js` and your Spotify redirect URIs.
    - **Which API/SDKs are you planning to use:** Check "Web API"
 
 4. Click **"Save"**
@@ -56,10 +59,12 @@ Get your DJ app running in **under 5 minutes**!
 
 ### Step 3: Run the App
 
-1. **Start local server:**
+1. **Start local server (default 8080):**
    ```bash
    python3 -m http.server 8080
    ```
+
+   > If you switch ports, edit `LOCAL_DEV_PORT` in `config.js` and restart your server on the same port.
 
 2. **Open in browser:**
    ```
