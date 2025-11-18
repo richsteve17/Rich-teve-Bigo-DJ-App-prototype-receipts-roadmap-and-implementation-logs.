@@ -19,6 +19,7 @@ import { CueSystem, TrackStaging } from '../../core/streaming/cueing.js';
 import { MixRecorder } from '../../core/streaming/recording.js';
 import { CameraManager } from '../../core/streaming/camera.js';
 import { Soundboard } from '../../core/effects/soundboard.js';
+import { SUGOClient } from '../../integrations/sugo/sugoClient.js';
 
 class BiGoDJApp {
   constructor() {
@@ -38,9 +39,11 @@ class BiGoDJApp {
     this.recorder = null;
     this.camera = null;
     this.soundboard = null;
+    this.sugoClient = null;
     this.masterGainNode = null;
     this.allTracks = [];
     this.currentDeck = 'A';
+    this.currentTrackInfo = { track: null, artist: null };
     this.isFirstRun = !localStorage.getItem('bigo_dj_mode');
   }
 
@@ -82,6 +85,10 @@ class BiGoDJApp {
     // Initialize Soundboard (routes to master)
     this.soundboard = new Soundboard(this.audioContext, this.masterGainNode);
     await this.soundboard.loadDefaultSamples();
+
+    // Initialize SUGO Client (for room 1250911)
+    this.sugoClient = new SUGOClient({ roomId: '1250911' });
+    this.setupSUGOEvents();
 
     // Initialize Core Modules based on mode
     this.tutorial = new DJTutorial();
@@ -283,6 +290,52 @@ class BiGoDJApp {
     this.crossfader = new Crossfader(crossfaderGainA, crossfaderGainB);
   }
 
+  setupSUGOEvents() {
+    // Gift received → Trigger soundboard
+    this.sugoClient.onGiftReceived = (giftData) => {
+      console.log('[SUGO] 🎁 Gift received:', giftData);
+
+      // Announce big gifts
+      if (giftData.value >= 100) {
+        this.sugoClient.announceGift(giftData.sender, giftData.giftName, giftData.value);
+      }
+
+      // Trigger soundboard for high-value gifts
+      if (giftData.value >= 1000) {
+        this.soundboard.play('pad1', 0.8); // Air horn for big gifts
+      } else if (giftData.value >= 500) {
+        this.soundboard.play('pad2', 0.8); // Kick drum
+      }
+
+      this.updateStatus(`🎁 ${giftData.sender} sent ${giftData.giftName}!`);
+    };
+
+    // Connection status updates
+    this.sugoClient.onConnected = () => {
+      console.log('[SUGO] ✅ Connected to room 1250911');
+      this.updateStatus('🟢 SUGO Connected');
+      this.updateSUGOButton(true);
+    };
+
+    this.sugoClient.onDisconnected = () => {
+      console.log('[SUGO] 🔴 Disconnected');
+      this.updateStatus('🔴 SUGO Disconnected');
+      this.updateSUGOButton(false);
+    };
+
+    // PK Battle events
+    this.sugoClient.onPKStart = (data) => {
+      console.log('[SUGO] ⚔️ PK Battle started!');
+      this.sugoClient.sendChatMessage('🔴🔵 ¡ES TIEMPO DE BATALLA! 🔴🔵');
+      this.sugoClient.sendChatMessage('¡VAMOS! Let\'s GO!');
+    };
+
+    this.sugoClient.onPKEnd = (data) => {
+      console.log('[SUGO] ⚔️ PK Battle ended!');
+      this.sugoClient.sendChatMessage('🏆 ¡BATALLA TERMINADA! 🏆');
+    };
+  }
+
   setupEventListeners() {
     // Spotify Login
     document.getElementById('spotify-login').addEventListener('click', () => {
@@ -290,6 +343,24 @@ class BiGoDJApp {
         loginToSpotify();
       } else {
         alert('Already connected to Spotify!');
+      }
+    });
+
+    // SUGO Connect
+    document.getElementById('sugo-connect').addEventListener('click', () => {
+      if (!this.sugoClient.isConnected) {
+        // Prompt for credentials
+        const token = prompt('Enter your SUGO token:\n(From Proxyman capture)');
+        const uid = prompt('Enter your SUGO UID:\n(From Proxyman capture)');
+
+        if (token && uid) {
+          this.sugoClient.setCredentials(token, uid);
+          this.sugoClient.connect();
+          this.updateStatus('Connecting to SUGO room 1250911...');
+        }
+      } else {
+        this.sugoClient.disconnect();
+        this.updateStatus('Disconnected from SUGO');
       }
     });
 
@@ -674,6 +745,13 @@ class BiGoDJApp {
       // Update suggestions
       this.updateSuggestions(track);
 
+      // Announce "Now Playing" to SUGO (if connected)
+      if (this.sugoClient && this.sugoClient.isConnected) {
+        this.sugoClient.announceNowPlaying(track.name, track.artist);
+        // Store current track info
+        this.currentTrackInfo = { track: track.name, artist: track.artist };
+      }
+
       this.updateStatus(`Loaded "${track.name}" to Deck ${deck}`);
     } catch (err) {
       console.error('Load track error:', err);
@@ -863,6 +941,20 @@ class BiGoDJApp {
       if (eqBtn) {
         eqBtn.style.display = 'none';
       }
+    }
+  }
+
+  updateSUGOButton(connected) {
+    const btn = document.getElementById('sugo-connect');
+
+    if (connected) {
+      btn.style.background = 'linear-gradient(135deg, #FF5E00, #FF8C00)';
+      btn.title = 'SUGO Connected - Room 1250911';
+      btn.querySelector('span').textContent = '📻 CONNECTED';
+    } else {
+      btn.style.background = '';
+      btn.title = 'Connect to SUGO Room 1250911';
+      btn.querySelector('span').textContent = '📻 SUGO';
     }
   }
 
