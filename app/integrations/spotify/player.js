@@ -286,6 +286,13 @@ export class DJDeck {
     // Volume state for Spotify mixing
     this.deckVolume = 0.8;
     this.crossfaderPosition = 0; // -1 to 1, 0 is center
+
+    // Spotify API rate limits volume changes, so batch updates
+    this.pendingSpotifyVolume = this.deckVolume;
+    this.spotifyVolumeUpdateInterval = 120; // ms (~8 updates/sec < 30 req/sec limit)
+    this.lastSpotifyVolumeUpdate = 0;
+    this.volumeUpdateTimeout = null;
+    this.volumeUpdatePromise = null;
   }
 
   /**
@@ -323,7 +330,7 @@ export class DJDeck {
    */
   async setVolume(volume) {
     this.deckVolume = volume;
-    await this.updateSpotifyVolume();
+    return this.updateSpotifyVolume();
   }
 
   /**
@@ -332,7 +339,7 @@ export class DJDeck {
    */
   async setCrossfaderPosition(position) {
     this.crossfaderPosition = position;
-    await this.updateSpotifyVolume();
+    return this.updateSpotifyVolume();
   }
 
   /**
@@ -354,8 +361,58 @@ export class DJDeck {
       finalVolume *= crossfaderGain;
     }
 
-    // Set Spotify player volume
-    await this.spotifyPlayer.setVolume(finalVolume);
+    // Clamp final volume into valid SDK range and remember for the next flush
+    this.pendingSpotifyVolume = Math.max(0, Math.min(1, finalVolume));
+
+    // If a flush is already scheduled/in-flight, reuse that promise so callers
+    // can await completion without spamming the Spotify API.
+    if (this.volumeUpdatePromise) {
+      return this.volumeUpdatePromise;
+    }
+
+    const now = this._getNow();
+    const elapsed = now - this.lastSpotifyVolumeUpdate;
+    const wait = Math.max(this.spotifyVolumeUpdateInterval - elapsed, 0);
+
+    if (wait === 0) {
+      this.lastSpotifyVolumeUpdate = now;
+      this.volumeUpdatePromise = this._flushSpotifyVolume();
+    } else {
+      this.volumeUpdatePromise = new Promise(resolve => {
+        this.volumeUpdateTimeout = setTimeout(async () => {
+          this.volumeUpdateTimeout = null;
+          this.lastSpotifyVolumeUpdate = this._getNow();
+          await this._flushSpotifyVolume();
+          resolve();
+        }, wait);
+      });
+    }
+
+    // Reset promise once the flush completes so future updates can schedule
+    // their own throttled calls.
+    this.volumeUpdatePromise.finally(() => {
+      this.volumeUpdatePromise = null;
+    });
+
+    return this.volumeUpdatePromise;
+  }
+
+  /**
+   * Actually send the volume value to Spotify, swallowing SDK errors so one
+   * bad response doesn't break future fades.
+   */
+  async _flushSpotifyVolume() {
+    try {
+      await this.spotifyPlayer.setVolume(this.pendingSpotifyVolume);
+    } catch (err) {
+      console.error('Spotify volume update failed', err);
+    }
+  }
+
+  _getNow() {
+    return (typeof performance !== 'undefined' && performance.now)
+      ? performance.now()
+      : Date.now();
   }
 
   /**
@@ -408,6 +465,10 @@ export class DJDeck {
    * Cleanup
    */
   destroy() {
+    if (this.volumeUpdateTimeout) {
+      clearTimeout(this.volumeUpdateTimeout);
+      this.volumeUpdateTimeout = null;
+    }
     this.spotifyPlayer.disconnect();
     this.gainNode.disconnect();
   }
