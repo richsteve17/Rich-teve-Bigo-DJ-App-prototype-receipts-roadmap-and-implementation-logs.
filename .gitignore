@@ -1,0 +1,2 @@
+# Local environment overrides (contains Spotify secrets)
+env.js

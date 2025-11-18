@@ -45,14 +45,18 @@ Get your DJ app running in **under 5 minutes**!
 4. Click **"Save"**
 5. Copy your **Client ID**
 
-### Step 2: Configure App
+### Step 2: Securely Inject Your Client ID
 
-1. Open `config.js` in the project root
-2. Replace `YOUR_SPOTIFY_CLIENT_ID` with your actual Client ID:
-   ```javascript
-   clientId: 'abc123your-client-id-here',
+1. Copy the template environment file and keep the real one out of Git:
+   ```bash
+   cp env.template.js env.js
    ```
-3. Save the file
+2. Edit `env.js` and replace `'your-spotify-client-id-goes-here'` with your actual Client ID.
+   - `env.js` is loaded before the app boots and is **.gitignored** so secrets stay local.
+   - For production builds, generate `env.js` (or an equivalent bundle) from your CI/CD secrets manager.
+3. Reload the app. Spotify-only features will now pick up the injected value at runtime.
+
+> ⚠️ If you previously relied on the hard-coded Client ID (`29de935743cf4c91bc0a07054077b039`), log into the [Spotify Dashboard](https://developer.spotify.com/dashboard) and rotate/delete that application immediately. Treat it as compromised.
 
 ### Step 3: Run the App
 
