@@ -324,10 +324,18 @@ class BiGoDJApp {
 
     // Crossfader
     const crossfader = document.getElementById('crossfader');
-    crossfader.addEventListener('input', (e) => {
+    crossfader.addEventListener('input', async (e) => {
       const position = parseFloat(e.target.value);
       this.crossfader.setPosition(position);
       this.updateCrossfaderDisplay(position);
+
+      // For Spotify decks, also update their volume based on crossfader
+      if (this.deckA && typeof this.deckA.setCrossfaderPosition === 'function') {
+        await this.deckA.setCrossfaderPosition(position);
+      }
+      if (this.deckB && typeof this.deckB.setCrossfaderPosition === 'function') {
+        await this.deckB.setCrossfaderPosition(position);
+      }
     });
 
     // EQ Controls (Deck A)
@@ -351,12 +359,18 @@ class BiGoDJApp {
     });
 
     // Volume Controls
-    document.getElementById('volume-a').addEventListener('input', (e) => {
-      this.deckA.setVolume(parseFloat(e.target.value));
+    document.getElementById('volume-a').addEventListener('input', async (e) => {
+      const volume = parseFloat(e.target.value);
+      if (typeof this.deckA.setVolume === 'function') {
+        await this.deckA.setVolume(volume);
+      }
     });
 
-    document.getElementById('volume-b').addEventListener('input', (e) => {
-      this.deckB.setVolume(parseFloat(e.target.value));
+    document.getElementById('volume-b').addEventListener('input', async (e) => {
+      const volume = parseFloat(e.target.value);
+      if (typeof this.deckB.setVolume === 'function') {
+        await this.deckB.setVolume(volume);
+      }
     });
 
     // Master Volume
