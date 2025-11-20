@@ -157,6 +157,14 @@ To access from your phone on same WiFi:
 2. Open `http://YOUR_IP:8080/app/web/dj-mixer/index.html` on phone
 3. For Spotify: Add `http://YOUR_IP:8080/app/web/dj-mixer/callback.html` to redirect URIs
 
+### Running on Android Emulator (Genymotion)
+For detailed instructions on setting up and running the app on Genymotion:
+- **See:** `docs/GENYMOTION_SETUP.md` - Complete guide for Mac + Genymotion
+- **Quick start:**
+  1. Start server with `python3 -m http.server 8080 --bind 0.0.0.0`
+  2. Find your Mac's local IP: `ifconfig | grep "inet " | grep -v 127.0.0.1`
+  3. Open Chrome in emulator: `http://YOUR_IP:8080/app/web/dj-mixer/index.html`
+
 ---
 
 ## App Modes Explained
