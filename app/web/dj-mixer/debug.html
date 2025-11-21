@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Debug - BIGO DJ</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #1a1f3a;
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+    }
+    h1 { color: #00d9ff; }
+    .check {
+      background: rgba(255,255,255,0.1);
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border-left: 4px solid #666;
+    }
+    .check.pass { border-left-color: #00ff88; }
+    .check.fail { border-left-color: #ff006e; }
+    .value {
+      font-weight: bold;
+      color: #00d9ff;
+      word-break: break-all;
+    }
+    .result {
+      background: linear-gradient(135deg, #00d9ff, #ff006e);
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      font-size: 1.5em;
+      text-align: center;
+      font-weight: bold;
+    }
+    button {
+      background: linear-gradient(135deg, #00d9ff, #ff006e);
+      border: none;
+      color: white;
+      font-size: 1.2em;
+      padding: 15px 40px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 10px 0;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Mobile Detection Debug</h1>
+  <p>This page will show you EXACTLY what the detection checks are returning on your device.</p>
+
+  <div id="checks"></div>
+  <div id="result"></div>
+
+  <button onclick="testOverlay()">Test Overlay Manually</button>
+  <button onclick="forceInit()">Force Init (Skip Overlay)</button>
+
+  <script>
+    const checks = document.getElementById('checks');
+    const result = document.getElementById('result');
+
+    // Run all detection checks
+    const userAgent = navigator.userAgent;
+    const hasOntouchstart = 'ontouchstart' in window;
+    const maxTouchPoints = navigator.maxTouchPoints || 0;
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    const mobileUAPattern = /mobile|android|iphone|ipad|ipod/i.test(userAgent);
+    const screenSizeCheck = screenWidth <= 768;
+
+    // Display all checks
+    checks.innerHTML = `
+      <div class="check">
+        <strong>User Agent:</strong><br>
+        <span class="value">${userAgent}</span>
+      </div>
+      <div class="check ${hasOntouchstart ? 'pass' : 'fail'}">
+        <strong>'ontouchstart' in window:</strong><br>
+        <span class="value">${hasOntouchstart}</span>
+      </div>
+      <div class="check ${maxTouchPoints > 0 ? 'pass' : 'fail'}">
+        <strong>navigator.maxTouchPoints:</strong><br>
+        <span class="value">${maxTouchPoints}</span>
+      </div>
+      <div class="check">
+        <strong>Screen Size:</strong><br>
+        <span class="value">${screenWidth} x ${screenHeight}</span>
+      </div>
+      <div class="check ${screenSizeCheck ? 'pass' : 'fail'}">
+        <strong>Screen Width <= 768px:</strong><br>
+        <span class="value">${screenSizeCheck}</span>
+      </div>
+      <div class="check ${mobileUAPattern ? 'pass' : 'fail'}">
+        <strong>User Agent Matches /mobile|iphone|ipad/:</strong><br>
+        <span class="value">${mobileUAPattern}</span>
+      </div>
+    `;
+
+    // Calculate final result
+    const needsUserGesture = hasOntouchstart || maxTouchPoints > 0 || mobileUAPattern || screenSizeCheck;
+
+    result.innerHTML = `
+      <div class="result" style="background: ${needsUserGesture ? 'linear-gradient(135deg, #00ff88, #00d9ff)' : 'linear-gradient(135deg, #ff006e, #ff8800)'}">
+        ${needsUserGesture ? '✅ SHOULD SHOW OVERLAY' : '❌ WOULD NOT SHOW OVERLAY'}
+      </div>
+      <p style="text-align: center; font-size: 0.9em; color: #888;">
+        Take a screenshot of this page and send it!
+      </p>
+    `;
+
+    // Test overlay function
+    function testOverlay() {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        color: white;
+      `;
+
+      overlay.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+          <h1 style="font-size: 3em; margin-bottom: 20px;">🎵</h1>
+          <h2 style="font-size: 1.8em; margin-bottom: 10px;">BIGO DJ</h2>
+          <p style="font-size: 1.2em; color: #888; margin-bottom: 40px;">Mobile Edition</p>
+          <button id="mobile-start-btn" style="
+            background: linear-gradient(135deg, #00d9ff, #ff006e);
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            padding: 20px 60px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 20px rgba(255, 0, 110, 0.4);
+          ">TAP TO START</button>
+          <p style="font-size: 0.9em; color: #666; margin-top: 30px;">This is what should appear!</p>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('#mobile-start-btn').addEventListener('click', () => {
+        overlay.remove();
+        alert('✅ Overlay works! Button was clicked.');
+      });
+    }
+
+    function forceInit() {
+      alert('In the real app, this would initialize the DJ interface with AudioContext.\n\nThe hang happens because AudioContext needs a user gesture on mobile.');
+    }
+
+    // Auto-show overlay if mobile detected
+    if (needsUserGesture) {
+      setTimeout(() => {
+        if (confirm('Mobile device detected! Show overlay automatically?')) {
+          testOverlay();
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
