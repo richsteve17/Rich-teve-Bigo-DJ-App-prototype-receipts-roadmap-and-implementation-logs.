@@ -67,6 +67,10 @@ class BiGoDJApp {
   async init() {
     console.log('🎵 Initializing BIGO DJ App...');
     console.log('📱 Is Mobile:', this.isMobile);
+    console.log('🔍 User Agent:', navigator.userAgent);
+    console.log('🔍 Touch Support:', 'ontouchstart' in window);
+    console.log('🔍 Touch Points:', navigator.maxTouchPoints);
+    console.log('🔍 Screen Size:', window.innerWidth, 'x', window.innerHeight);
 
     // Initialize mode manager
     this.modeManager = new ModeManager();
@@ -76,7 +80,10 @@ class BiGoDJApp {
     const needsUserGesture = this.isMobile ||
                              'ontouchstart' in window ||
                              navigator.maxTouchPoints > 0 ||
-                             /mobile|android|iphone|ipad|ipod/i.test(navigator.userAgent);
+                             /mobile|android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
+                             window.innerWidth <= 768; // NUCLEAR: Also check screen size
+
+    console.log('🎯 Needs User Gesture:', needsUserGesture);
 
     if (needsUserGesture) {
       console.log('✅ Showing mobile tap-to-start overlay (user gesture required)');
