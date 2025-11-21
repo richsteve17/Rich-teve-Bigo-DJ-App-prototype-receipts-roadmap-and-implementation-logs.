@@ -47,20 +47,44 @@ class BiGoDJApp {
 
   detectMobile() {
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+    const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+
+    // Also check for touch support and screen size
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isSmallScreen = window.innerWidth <= 768;
+
+    console.log('🔍 Mobile Detection:', {
+      userAgent: navigator.userAgent,
+      isMobileUA,
+      hasTouch,
+      isSmallScreen,
+      screenWidth: window.innerWidth
+    });
+
+    return isMobileUA || (hasTouch && isSmallScreen);
   }
 
   async init() {
     console.log('🎵 Initializing BIGO DJ App...');
+    console.log('📱 Is Mobile:', this.isMobile);
 
     // Initialize mode manager
     this.modeManager = new ModeManager();
 
-    // Mobile devices require user gesture before AudioContext
-    if (this.isMobile) {
+    // ALWAYS show tap-to-start if we detect ANY mobile characteristics
+    // This is more aggressive to ensure we never hang on mobile
+    const needsUserGesture = this.isMobile ||
+                             'ontouchstart' in window ||
+                             navigator.maxTouchPoints > 0 ||
+                             /mobile|android|iphone|ipad|ipod/i.test(navigator.userAgent);
+
+    if (needsUserGesture) {
+      console.log('✅ Showing mobile tap-to-start overlay (user gesture required)');
       this.showMobileTapToStart();
       return;
     }
+
+    console.log('⚠️ Desktop mode - continuing normal init');
 
     // Show first-time setup if needed
     if (this.isFirstRun) {
