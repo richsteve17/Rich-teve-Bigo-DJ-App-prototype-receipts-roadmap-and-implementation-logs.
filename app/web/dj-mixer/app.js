@@ -42,6 +42,12 @@ class BiGoDJApp {
     this.allTracks = [];
     this.currentDeck = 'A';
     this.isFirstRun = !localStorage.getItem('bigo_dj_mode');
+    this.isMobile = this.detectMobile();
+  }
+
+  detectMobile() {
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
   }
 
   async init() {
@@ -49,6 +55,12 @@ class BiGoDJApp {
 
     // Initialize mode manager
     this.modeManager = new ModeManager();
+
+    // Mobile devices require user gesture before AudioContext
+    if (this.isMobile) {
+      this.showMobileTapToStart();
+      return;
+    }
 
     // Show first-time setup if needed
     if (this.isFirstRun) {
@@ -62,12 +74,85 @@ class BiGoDJApp {
     await this.continueInit();
   }
 
+  showMobileTapToStart() {
+    const overlay = document.createElement('div');
+    overlay.id = 'mobile-start-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      color: white;
+      font-family: 'Arial', sans-serif;
+    `;
+
+    overlay.innerHTML = `
+      <div style="text-align: center; padding: 20px;">
+        <h1 style="font-size: 3em; margin-bottom: 20px;">🎵</h1>
+        <h2 style="font-size: 1.8em; margin-bottom: 10px;">BIGO DJ</h2>
+        <p style="font-size: 1.2em; color: #888; margin-bottom: 40px;">Mobile Edition</p>
+        <button id="mobile-start-btn" style="
+          background: linear-gradient(135deg, #00d9ff, #ff006e);
+          border: none;
+          color: white;
+          font-size: 1.5em;
+          padding: 20px 60px;
+          border-radius: 50px;
+          cursor: pointer;
+          font-weight: bold;
+          box-shadow: 0 4px 20px rgba(255, 0, 110, 0.4);
+        ">TAP TO START</button>
+        <p style="font-size: 0.9em; color: #666; margin-top: 30px;">Audio playback requires interaction on mobile</p>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const startBtn = document.getElementById('mobile-start-btn');
+    startBtn.addEventListener('click', async () => {
+      // Remove overlay
+      overlay.remove();
+
+      // Continue with normal initialization
+      if (this.isFirstRun) {
+        showFirstTimeSetup((mode) => {
+          this.modeManager.setMode(mode);
+          this.continueInit();
+        });
+      } else {
+        await this.continueInit();
+      }
+    });
+  }
+
   async continueInit() {
     const mode = this.modeManager.getMode();
     console.log(`🎮 Starting in ${mode} mode`);
 
     // Initialize Audio Context
     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Resume AudioContext if suspended (Mobile Safari requirement)
+    if (this.audioContext.state === 'suspended') {
+      console.log('⚠️ AudioContext suspended - resuming...');
+      try {
+        await this.audioContext.resume();
+        console.log('✅ AudioContext resumed successfully');
+      } catch (err) {
+        console.error('Failed to resume AudioContext:', err);
+        this.updateStatus('Audio initialization failed');
+        return;
+      }
+    }
+
+    console.log(`🔊 AudioContext state: ${this.audioContext.state}`);
 
     // Initialize Streaming Features (CUE, Staging, Recording, Camera)
     this.cueSystem = new CueSystem(this.audioContext);
