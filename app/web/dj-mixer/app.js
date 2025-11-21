@@ -987,9 +987,22 @@ class BiGoDJApp {
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
-  const app = new BiGoDJApp();
-  await app.init();
+  try {
+    document.getElementById('room-status').textContent = 'Creating app...';
+    const app = new BiGoDJApp();
 
-  // Make app globally accessible for debugging
-  window.biGoDJ = app;
+    document.getElementById('room-status').textContent = 'Initializing app...';
+    await app.init();
+
+    // Make app globally accessible for debugging
+    window.biGoDJ = app;
+    document.getElementById('room-status').textContent = 'App initialized!';
+  } catch (error) {
+    console.error('❌ App initialization failed:', error);
+    document.getElementById('room-status').textContent = 'ERROR: ' + error.message;
+    document.getElementById('room-status').style.color = '#ff006e';
+
+    // Show error to user
+    alert('App failed to initialize:\n\n' + error.message + '\n\n' + error.stack);
+  }
 });
