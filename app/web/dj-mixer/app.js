@@ -67,31 +67,28 @@ class BiGoDJApp {
   async init() {
     console.log('🎵 Initializing BIGO DJ App...');
     console.log('📱 Is Mobile:', this.isMobile);
-    console.log('🔍 User Agent:', navigator.userAgent);
-    console.log('🔍 Touch Support:', 'ontouchstart' in window);
-    console.log('🔍 Touch Points:', navigator.maxTouchPoints);
-    console.log('🔍 Screen Size:', window.innerWidth, 'x', window.innerHeight);
 
     // Initialize mode manager
     this.modeManager = new ModeManager();
 
-    // ALWAYS show tap-to-start if we detect ANY mobile characteristics
-    // This is more aggressive to ensure we never hang on mobile
-    const needsUserGesture = this.isMobile ||
-                             'ontouchstart' in window ||
-                             navigator.maxTouchPoints > 0 ||
-                             /mobile|android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
-                             window.innerWidth <= 768; // NUCLEAR: Also check screen size
+    // Check if HTML overlay already handled the mobile gesture
+    if (window.mobileGestureComplete) {
+      console.log('✅ Mobile gesture already completed via HTML overlay');
+      // Continue directly to normal init
+    } else {
+      // Legacy check - shouldn't hit this since HTML overlay handles it now
+      const needsUserGesture = this.isMobile ||
+                               'ontouchstart' in window ||
+                               navigator.maxTouchPoints > 0 ||
+                               /mobile|android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
+                               window.innerWidth <= 768;
 
-    console.log('🎯 Needs User Gesture:', needsUserGesture);
-
-    if (needsUserGesture) {
-      console.log('✅ Showing mobile tap-to-start overlay (user gesture required)');
-      this.showMobileTapToStart();
-      return;
+      if (needsUserGesture) {
+        console.log('⚠️ HTML overlay missed - showing fallback overlay');
+        this.showMobileTapToStart();
+        return;
+      }
     }
-
-    console.log('⚠️ Desktop mode - continuing normal init');
 
     // Show first-time setup if needed
     if (this.isFirstRun) {
