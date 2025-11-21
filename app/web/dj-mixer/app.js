@@ -71,14 +71,20 @@ class BiGoDJApp {
     // Initialize mode manager
     this.modeManager = new ModeManager();
 
-    // Mobile devices require user gesture before AudioContext
-    if (this.isMobile) {
-      console.log('✅ Showing mobile tap-to-start overlay');
+    // ALWAYS show tap-to-start if we detect ANY mobile characteristics
+    // This is more aggressive to ensure we never hang on mobile
+    const needsUserGesture = this.isMobile ||
+                             'ontouchstart' in window ||
+                             navigator.maxTouchPoints > 0 ||
+                             /mobile|android|iphone|ipad|ipod/i.test(navigator.userAgent);
+
+    if (needsUserGesture) {
+      console.log('✅ Showing mobile tap-to-start overlay (user gesture required)');
       this.showMobileTapToStart();
       return;
     }
 
-    console.log('⚠️ Not mobile, continuing normal init');
+    console.log('⚠️ Desktop mode - continuing normal init');
 
     // Show first-time setup if needed
     if (this.isFirstRun) {
